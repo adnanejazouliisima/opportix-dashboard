@@ -275,13 +275,46 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
     const[arr,set,k]=m[type];
     const n=[...arr,{...entry,id:Date.now()}];
-    set(n);sv({[k]:n});setShowAdd(null);setForm({});
+    set(n);
+    
+    // Auto-remove from dispo when adding depart, auto-add to dispo when adding retour
+    if(type==="deps"&&entry.im){
+      const im=entry.im.toUpperCase().trim();
+      // Retirer de DISPO
+      const nd=disp.filter((d:any)=>d.im!==im);
+      // Changer IMMO → ACTIF dans urban/green
+      const nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF"}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF"}:v);
+      setUrban(nu);setGreen(ng);setDisp(nd);
+      sv({u:nu,g:ng,dep:n,di:nd});
+    }else if(type==="rets"&&entry.im){
+      if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
+        const nd=[...disp,{...entry,id:Date.now()}];
+        setDisp(nd);sv({ret:n,di:nd});
+      }else{sv({ret:n});}
+    }else{
+      sv({[k]:n});
+    }
+    setShowAdd(null);setForm({});
   };
   const del=(type:string,id:any,isIdx?:boolean)=>{
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
     const[arr,set,k]=m[type];
+    const item=isIdx?arr[id]:arr.find((d:any)=>d.id===id);
     const n=isIdx?arr.filter((_:any,i:number)=>i!==id):arr.filter((d:any)=>d.id!==id);
-    set(n);sv({[k]:n});setDelC(null);
+    set(n);
+    
+    // Auto-add to dispo when deleting depart, auto-remove from dispo when deleting retour
+    if(type==="deps"&&item?.im&&!disp.find((d:any)=>d.im===item.im.toUpperCase().trim())){
+      const nd=[...disp,{soc:item.soc,im:item.im.toUpperCase().trim(),mo:item.mo||"",no:item.no||"",id:Date.now()}];
+      setDisp(nd);sv({dep:n,di:nd});
+    }else if(type==="rets"&&item?.im){
+      const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());
+      setDisp(nd);sv({ret:n,di:nd});
+    }else{
+      sv({[k]:n});
+    }
+    setDelC(null);
   };
   const tog=(im:string)=>{
     const up=(l:any[])=>l.map(v=>v.im===im?{...v,st:v.st==="ACTIF"?"IMMO":"ACTIF"}:v);
