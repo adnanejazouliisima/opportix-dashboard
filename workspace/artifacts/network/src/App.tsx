@@ -135,23 +135,52 @@ const I_G=[
 const I_GA=[{soc:"URBAN NEO",im:"HF-190-ZK",gar:"Adama Carrosserie",de:"",ds:"",ji:""}];
 
 const POLES={activite:{n:"Activite",c:"#E8633A"},parc:{n:"Parc",c:"#3A9BD5"},commercial:{n:"Commercial",c:"#2FAA6B"}};
-const I_M=[
-  {id:1,fr:"Marc T.",po:"parc",to:"all",tx:"HF-190-ZK immobilise chez Adama Carrosserie — besoin remplacement",ti:"08:42",ur:true},
-  {id:2,fr:"Karim B.",po:"activite",to:"parc",tx:"Chauffeur reaffecte. ETA retour vehicule ?",ti:"08:55",ur:false},
-  {id:3,fr:"Amelie F.",po:"commercial",to:"activite",tx:"Client attend livraison — Sidy Diagne disponible ?",ti:"09:10",ur:false},
-];
+const I_M=[];
 
-export default function App(){
-  const [user,setUser]=useState<typeof USERS[0]|null>(()=>{
-    try{const s=localStorage.getItem("opportix-session");return s?JSON.parse(s):null;}catch{return null;}
-  });
-  const login=(u:typeof USERS[0])=>{localStorage.setItem("opportix-session",JSON.stringify(u));setUser(u);};
-  const logout=()=>{localStorage.removeItem("opportix-session");setUser(null);};
-  if(!user) return <LoginPage onLogin={login}/>;
-  return <Dashboard user={user} onLogout={logout}/>;
+const API_URL = "http://localhost:3000";
+
+interface AppUser {
+  id: string;
+  username: string;
+  displayName: string;
+  role: string;
+  pole: string;
 }
 
-function Dashboard({user,onLogout}:{user:typeof USERS[0],onLogout:()=>void}){
+interface AppTokenData {
+  token: string;
+  user: AppUser;
+}
+
+export default function App(){
+  const [user,setUser]=useState<AppTokenData|null>(()=>{
+    try{const s=localStorage.getItem("opportix-session");return s?JSON.parse(s):null;}catch{return null;}
+  });
+  
+  const login=async(u:typeof USERS[0])=>{
+    try{
+      const res=await fetch(`${API_URL}/api/login`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:u.login,password:u.pwd})
+      });
+      const data=await res.json();
+      if(res.ok){
+        localStorage.setItem("opportix-session",JSON.stringify(data));
+        setUser(data);
+      }else{
+        console.error(data.error);
+      }
+    }catch(e){console.error("Login error:",e);}
+  };
+  
+  const logout=()=>{localStorage.removeItem("opportix-session");setUser(null);};
+  
+  if(!user) return <LoginPage onLogin={login}/>;
+  return <Dashboard user={user} userToken={user.token} onLogout={logout}/>;
+}
+
+function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLogout:()=>void}){
   const [tab,setTab]=useState("diffusion");
   const [urban,setUrban]=useState(I_U);
   const [green,setGreen]=useState(I_G);
@@ -172,31 +201,62 @@ function Dashboard({user,onLogout}:{user:typeof USERS[0],onLogout:()=>void}){
   const ce=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{ce.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+  
+  // Charge les données depuis l'API
+  const loadDataFromAPI=async()=>{
+    try{
+      const res=await fetch(`${API_URL}/api/data`,{
+        headers:{"Authorization":`Bearer ${userToken}`}
+      });
+      if(res.ok){
+        const data=await res.json();
+        if(data.urban) setUrban(data.urban);
+        if(data.green) setGreen(data.green);
+        if(data.garage) setGarage(data.garage);
+        if(data.deps) setDeps(data.deps);
+        if(data.rets) setRets(data.rets);
+        if(data.disp) setDisp(data.disp);
+        if(data.vacs) setVacs(data.vacs);
+        if(data.pros) setPros(data.pros);
+        if(data.msgs) setMsgs(data.msgs);
+      }
+    }catch(e){console.error("API error:",e);}
+  };
+  
+  // Sauvegarde les données sur l'API
+  const saveDataToAPI=async(data:any)=>{
+    try{
+      await fetch(`${API_URL}/api/data`,{
+        method:"PUT",
+        headers:{
+          "Authorization":`Bearer ${userToken}`,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify(data)
+      });
+    }catch(e){console.error("Save error:",e);}
+  };
+
+  // Charge au démarrage + recharge toutes les 5s
   useEffect(()=>{
-    (async()=>{
-      try{
-        const raw=localStorage.getItem("net-v5");
-        if(raw){
-          const d=JSON.parse(raw);
-          if(d.u) setUrban(d.u);
-          if(d.g) setGreen(d.g);
-          if(d.ga) setGarage(d.ga);
-          if(d.dep) setDeps(d.dep);
-          if(d.ret) setRets(d.ret);
-          if(d.di) setDisp(d.di);
-          if(d.va) setVacs(d.va);
-          if(d.pr) setPros(d.pr);
-        }
-      }catch(e){}
-    })();
-  },[]);
+    loadDataFromAPI();
+    const interval=setInterval(loadDataFromAPI,5000);
+    return ()=>clearInterval(interval);
+  },[userToken]);
 
   const sv=(o:any={})=>{
     const d={
-      u:o.u??urban,g:o.g??green,ga:o.ga??garage,
-      dep:o.dep??deps,ret:o.ret??rets,
-      di:o.di??disp,va:o.va??vacs,pr:o.pr??pros
+      urban:o.urban??urban,
+      green:o.green??green,
+      garage:o.garage??garage,
+      deps:o.deps??deps,
+      rets:o.rets??rets,
+      disp:o.disp??disp,
+      vacs:o.vacs??vacs,
+      pros:o.pros??pros,
+      msgs:o.msgs??msgs
     };
+    saveDataToAPI(d);
     try{localStorage.setItem("net-v5",JSON.stringify(d));}catch(e){}
   };
 
@@ -278,8 +338,8 @@ function Dashboard({user,onLogout}:{user:typeof USERS[0],onLogout:()=>void}){
           <Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/>
           <div style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.nom.charAt(0)}</div>
-            <span style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.nom}</span>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
+            <span style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.displayName}</span>
             <span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#F0F0EE",color:"#777"}}>{user.role}</span>
             <button onClick={onLogout} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Déconnexion</button>
           </div>
