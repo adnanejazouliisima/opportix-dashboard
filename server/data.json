@@ -1,0 +1,674 @@
+{
+  "urban": [
+    {
+      "im": "HE-826-YX",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Sidy Diagne"
+    },
+    {
+      "im": "HE-246-YW",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Florin Constantinescu"
+    },
+    {
+      "im": "HF-314-JN",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Nguyen Thantni"
+    },
+    {
+      "im": "HD-413-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Sadeed Hussain"
+    },
+    {
+      "im": "HE-372-TA",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Abdelkader El Arrami"
+    },
+    {
+      "im": "HC-446-BB",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Youssouf El Matiar"
+    },
+    {
+      "im": "HF-507-ZL",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Amine Nejjari"
+    },
+    {
+      "im": "HF-166-ZL",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Bilel Benghezala"
+    },
+    {
+      "im": "GS-285-QW",
+      "mq": "TOYOTA",
+      "mo": "BZ4X ORIGIN",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Bachir Maaref"
+    },
+    {
+      "im": "HD-722-ZQ",
+      "mq": "KIA",
+      "mo": "EV6",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Jattari Abdelrahman"
+    },
+    {
+      "im": "HF-190-ZK",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Garage Adama Carrosserie"
+    },
+    {
+      "im": "HD-961-VC",
+      "mq": "KIA",
+      "mo": "EV6",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Abdoulay Diaby"
+    },
+    {
+      "im": "HD-482-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Zakaria Leghifir"
+    },
+    {
+      "im": "HD-230-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Hasnad Mohamed"
+    },
+    {
+      "im": "GX-967-NE",
+      "mq": "TOYOTA",
+      "mo": "CAMRY",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Abdou Ndao"
+    },
+    {
+      "im": "HD-922-BP",
+      "mq": "TOYOTA",
+      "mo": "BZ4X ORIGIN",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Mourad Amezian"
+    },
+    {
+      "im": "HC-345-JZ",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Takfarinas Bounou"
+    },
+    {
+      "im": "GX-731-TZ",
+      "mq": "TESLA",
+      "mo": "MODEL Y",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Mani Ryan"
+    },
+    {
+      "im": "HC-546-BB",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Fares El Haddad"
+    },
+    {
+      "im": "HC-261-JZ",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Ali Neji"
+    },
+    {
+      "im": "HE-191-BV",
+      "mq": "TOYOTA",
+      "mo": "BZ4X ORIGIN",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Nadia Ichmaouin"
+    },
+    {
+      "im": "GX-118-JS",
+      "mq": "TOYOTA",
+      "mo": "CAMRY",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Abdelhak Ben Hamed"
+    },
+    {
+      "im": "GN-113-NJ",
+      "mq": "TESLA",
+      "mo": "MODEL Y",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Yassine Imzilen"
+    },
+    {
+      "im": "GP-867-YC",
+      "mq": "SUZUKI",
+      "mo": "SWACE PACK",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Leopold Tabbougie"
+    },
+    {
+      "im": "HD-494-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Euloge Claudine"
+    },
+    {
+      "im": "HD-373-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Soufiane El Jay"
+    },
+    {
+      "im": "GX-842-EY",
+      "mq": "TOYOTA",
+      "mo": "CAMRY",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Myriam Lazreg"
+    },
+    {
+      "im": "HD-408-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Yao Ekouame Elizee"
+    },
+    {
+      "im": "HG-773-AP",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "GLOBAL RENT",
+      "st": "ACTIF",
+      "ch": "Fayz Coulibaly"
+    },
+    {
+      "im": "HG-786-AH",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "GLOBAL RENT",
+      "st": "ACTIF",
+      "ch": "Lies Mebarki"
+    },
+    {
+      "im": "HF-761-MG",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "GLOBAL RENT",
+      "st": "ACTIF",
+      "ch": "Kamel Zibouche"
+    },
+    {
+      "im": "HG-835-AJ",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "GLOBAL RENT",
+      "st": "ACTIF",
+      "ch": "Elghazi Chawani"
+    },
+    {
+      "im": "HF-543-MJ",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "GLOBAL RENT",
+      "st": "ACTIF",
+      "ch": "Sega Diallo"
+    },
+    {
+      "im": "HD-613-MT",
+      "mq": "TESLA",
+      "mo": "MODEL 3",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Oumar Bouchia"
+    },
+    {
+      "im": "HF-949-QD",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Mohamed Benderdour"
+    },
+    {
+      "im": "HF-319-QF",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Jackson Mampana"
+    },
+    {
+      "im": "HF-049-QF",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Zidane Lamaourek"
+    },
+    {
+      "im": "HF-201-QE",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Ridar Khaalp"
+    },
+    {
+      "im": "HF-622-QE",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Massila Coulibally"
+    },
+    {
+      "im": "HF-465-QF",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "CLICAR",
+      "st": "ACTIF",
+      "ch": "Soufiane Essaber"
+    },
+    {
+      "im": "GS-426-QY",
+      "mq": "TOYOTA",
+      "mo": "BZ4X ORIGIN",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Gouin Jeanluc"
+    },
+    {
+      "im": "HH-068-JH",
+      "mq": "HYUNDAI",
+      "mo": "STARIA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Thiery Barbet"
+    },
+    {
+      "im": "GZ-917-QJ",
+      "mq": "TOYOTA",
+      "mo": "BZ4X ORIGIN",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Nacim Bekir"
+    },
+    {
+      "im": "HF-216-BP",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Yono Dibert Bekoy"
+    }
+  ],
+  "green": [
+    {
+      "im": "HC-397-GT",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Amokrane Souissi"
+    },
+    {
+      "im": "HC-786-BA",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Bureau"
+    },
+    {
+      "im": "HF-491-AD",
+      "mq": "TOYOTA",
+      "mo": "BZ4X",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Benjebara Boumediene"
+    },
+    {
+      "im": "HE-234-YW",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Micakel Habran"
+    },
+    {
+      "im": "HF-848-JQ",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Bourger Olivier"
+    },
+    {
+      "im": "HC-334-SX",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Dylan Marigo"
+    },
+    {
+      "im": "HE-214-YW",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "William Deduytesche"
+    },
+    {
+      "im": "GW-796-SP",
+      "mq": "TESLA",
+      "mo": "MODEL Y",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Gohou Abdel Naki"
+    },
+    {
+      "im": "HD-227-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Bureau Accidente"
+    },
+    {
+      "im": "GK-642-TS",
+      "mq": "TESLA",
+      "mo": "MODEL Y",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Beyene Marc"
+    },
+    {
+      "im": "HC-638-SX",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Lucas Menendez"
+    },
+    {
+      "im": "HF-328-ZH",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Garage Auto+ Montmagny"
+    },
+    {
+      "im": "HC-022-NA",
+      "mq": "HYUNDAI",
+      "mo": "KONA",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Zouhair Zaghouan"
+    },
+    {
+      "im": "HD-906-CS",
+      "mq": "TOYOTA",
+      "mo": "BZ4X",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Diaby Karamba"
+    },
+    {
+      "im": "HF-833-ZK",
+      "mq": "KIA",
+      "mo": "EV3",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Maela Tessono"
+    },
+    {
+      "im": "GT-970-AQ",
+      "mq": "TOYOTA",
+      "mo": "BZ4X",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Bislan Tcholaev"
+    },
+    {
+      "im": "HD-240-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Sebastien Lesel"
+    },
+    {
+      "im": "HE-069-BV",
+      "mq": "TOYOTA",
+      "mo": "BZ4X",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Attik El Diama"
+    },
+    {
+      "im": "HD-251-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Nguessan Kevin"
+    },
+    {
+      "im": "HD-488-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Jacque Prince"
+    },
+    {
+      "im": "HD-502-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Hergeuy Sergiu"
+    },
+    {
+      "im": "HD-460-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Riane Mourad"
+    },
+    {
+      "im": "HD-508-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Diallo Mamadou"
+    },
+    {
+      "im": "GX-213-RK",
+      "mq": "TESLA",
+      "mo": "MODEL 3",
+      "le": "DRIVE ONE",
+      "st": "ACTIF",
+      "ch": "Khaled Safta"
+    },
+    {
+      "im": "GK-429-XB",
+      "mq": "TESLA",
+      "mo": "MODEL 3",
+      "le": "DRIVE ONE",
+      "st": "ACTIF",
+      "ch": "Verfel Lelo"
+    },
+    {
+      "im": "HA-768-GT",
+      "mq": "TESLA",
+      "mo": "MODEL Y",
+      "le": "DRIVE ONE",
+      "st": "ACTIF",
+      "ch": "El Jattari Ahmed"
+    },
+    {
+      "im": "HF-768-BN",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Yahcine Belliil"
+    },
+    {
+      "im": "HD-511-HZ",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "IMMO",
+      "ch": "Bureau"
+    },
+    {
+      "im": "HF-899-BN",
+      "mq": "BYD",
+      "mo": "SEAL",
+      "le": "ELPIS",
+      "st": "ACTIF",
+      "ch": "Ababii Boris"
+    }
+  ],
+  "garage": [
+    {
+      "soc": "URBAN NEO",
+      "im": "HF-190-ZK",
+      "gar": "Adama Carrosserie",
+      "de": "",
+      "ds": "",
+      "ji": ""
+    }
+  ],
+  "deps": [],
+  "rets": [],
+  "disp": [],
+  "vacs": [
+    {
+      "ch": "William Deduytesche",
+      "soc": "GREEN",
+      "deb": "12/04",
+      "fin": "02/05",
+      "id": 1774343032241
+    },
+    {
+      "ch": "Fahyz Coulibaly",
+      "deb": "06/04",
+      "fin": "23/04",
+      "soc": "URBAN NEO",
+      "id": 1774344170655
+    },
+    {
+      "ch": "Soufiane El Jay Hmami",
+      "deb": "01/04",
+      "fin": "08/04",
+      "soc": "URBAN NEO",
+      "id": 1774344259957
+    }
+  ],
+  "pros": [],
+  "msgs": [
+    {
+      "id": 1,
+      "fr": "Marc T.",
+      "po": "parc",
+      "to": "all",
+      "tx": "HF-190-ZK immobilise chez Adama Carrosserie — besoin remplacement",
+      "ti": "08:42",
+      "ur": true
+    },
+    {
+      "id": 2,
+      "fr": "Karim B.",
+      "po": "activite",
+      "to": "parc",
+      "tx": "Chauffeur reaffecte. ETA retour vehicule ?",
+      "ti": "08:55",
+      "ur": false
+    },
+    {
+      "id": 3,
+      "fr": "Amelie F.",
+      "po": "commercial",
+      "to": "activite",
+      "tx": "Client attend livraison — Sidy Diagne disponible ?",
+      "ti": "09:10",
+      "ur": false
+    },
+    {
+      "id": 1774277091361,
+      "fr": "Shirine",
+      "po": "commercial",
+      "to": "commercial",
+      "tx": "test",
+      "ti": "15:44",
+      "ur": false
+    },
+    {
+      "id": 1774277102341,
+      "fr": "Mohamed",
+      "po": "all",
+      "to": "all",
+      "tx": "top",
+      "ti": "15:45",
+      "ur": false
+    }
+  ]
+}

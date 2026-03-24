@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "displayName": "Mohamed",
+    "role": "admin",
+    "pole": "all",
+    "password": "$2b$10$YxRwO2cRJqSHKLXyNwHSJ.IjCEXFXV31pCPxb1WToXR6v2Q754MUS"
+  },
+  {
+    "id": 2,
+    "username": "yannis",
+    "displayName": "Yannis",
+    "role": "editeur",
+    "pole": "activite",
+    "password": "$2b$10$fTfUL18wIOjfE4fiKZsDZu35sH2JuQ6guX2y6d1nCosTTSlb8Q64W"
+  },
+  {
+    "id": 3,
+    "username": "samy",
+    "displayName": "Samy",
+    "role": "editeur",
+    "pole": "parc",
+    "password": "$2b$10$7boAefe//wVSgJ4bblHANuzaqRXlzq1xSWC1JJeQKKvqIueR/xifu"
+  },
+  {
+    "id": 4,
+    "username": "amel",
+    "displayName": "Amel",
+    "role": "editeur",
+    "pole": "parc",
+    "password": "$2b$10$tqTgODk1eYbDgJkhfiV/l.U8heJ/mIO4zz9PimhSfe7ShKRLRv5XG"
+  },
+  {
+    "id": 5,
+    "username": "foued",
+    "displayName": "Foued",
+    "role": "editeur",
+    "pole": "parc",
+    "password": "$2b$10$dzhdXisz3bOraocbCoJ9A.mbwe3mQrtMQNeo/WkI4/RJYy4iPK/xy"
+  },
+  {
+    "id": 6,
+    "username": "swella",
+    "displayName": "Swella",
+    "role": "editeur",
+    "pole": "commercial",
+    "password": "$2b$10$6zpMRDRqr9lxxKCwpdWLo.7mHx1tKsFRvOZg39x66RMW.3BT1zcSu"
+  },
+  {
+    "id": 7,
+    "username": "shirine",
+    "displayName": "Shirine",
+    "role": "editeur",
+    "pole": "commercial",
+    "password": "$2b$10$c8Ae/PWejU8raZrWDsCKoeXjNvaBNpVVsP2MAsTKsetyHZQV4wYr2"
+  }
+]
