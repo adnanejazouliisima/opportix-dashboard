@@ -7,8 +7,11 @@ const jwt = require('jsonwebtoken');
 const { MongoClient } = require('mongodb');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const http = require('http');
+const { Server: SocketServer } = require('socket.io');
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || 'network-dashboard-secret-key-2024';
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
@@ -26,6 +29,16 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
+
+/* ═══ SOCKET.IO ═══ */
+const io = new SocketServer(httpServer, { cors: { origin: '*' } });
+io.on('connection', (socket) => {
+  socket.on('auth', (token) => {
+    try { socket.user = jwt.verify(token, SECRET); socket.join('authed'); }
+    catch { socket.disconnect(); }
+  });
+});
+function broadcast() { io.to('authed').emit('data-changed'); }
 
 /* ═══ RATE LIMITING ═══ */
 const loginLimiter = rateLimit({
@@ -60,6 +73,7 @@ async function connectDB() {
   await db.collection('users').createIndex({ id: 1 });
   await db.collection('data').createIndex({ _key: 1 });
   await db.collection('audit').createIndex({ ts: -1 });
+  await db.collection('archive').createIndex({ deletedAt: -1 });
 
   await seedIfEmpty();
   await runMigrations();
@@ -193,6 +207,7 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
   }
   await db.collection('data').updateOne({ _key: 'fleet' }, { $set: d }, { upsert: true });
   await audit(req.user, 'data_update', { keys: Object.keys(d) });
+  broadcast();
   res.json({ ok: true });
 });
 
@@ -206,7 +221,65 @@ app.post('/api/data/message', auth, async (req, res) => {
     { $push: { msgs: { ...req.body, id: crypto.randomUUID() } } },
     { upsert: true }
   );
+  broadcast();
   res.json({ ok: true });
+});
+
+/* ═══ ARCHIVE (soft delete) ═══ */
+app.post('/api/archive', auth, canEdit, async (req, res) => {
+  const { section, item } = req.body;
+  if (!section || !item) return res.status(400).json({ error: 'Section et item requis' });
+  await db.collection('archive').insertOne({
+    section,
+    item,
+    deletedBy: req.user.username,
+    deletedAt: new Date(),
+  });
+  await audit(req.user, 'item_archived', { section, im: item.im || item.nom || item.ch || '?' });
+  res.json({ ok: true });
+});
+
+app.get('/api/archive', auth, adminOnly, async (req, res) => {
+  const items = await db.collection('archive').find().sort({ deletedAt: -1 }).limit(200).toArray();
+  res.json(items);
+});
+
+/* ═══ CSV EXPORT ═══ */
+app.get('/api/export/csv', auth, async (req, res) => {
+  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  if (!doc) return res.status(404).json({ error: 'Aucune donnee' });
+
+  const section = req.query.section || 'vehicles';
+  let csv = '';
+
+  if (section === 'vehicles') {
+    csv = 'Societe;Immatriculation;Marque;Modele;Leaser;Statut;Chauffeur\n';
+    (doc.u || []).forEach(v => csv += `URBAN NEO;${v.im};${v.mq};${v.mo};${v.le};${v.st};${v.ch}\n`);
+    (doc.g || []).forEach(v => csv += `GREEN;${v.im};${v.mq};${v.mo};${v.le};${v.st};${v.ch}\n`);
+  } else if (section === 'departs') {
+    csv = 'Societe;Immatriculation;Chauffeur;Date;Note\n';
+    (doc.dep || []).forEach(d => csv += `${d.soc};${d.im};${d.ch||''};${d.dt||''};${d.no||''}\n`);
+  } else if (section === 'retours') {
+    csv = 'Societe;Immatriculation;Chauffeur;Date;Note\n';
+    (doc.ret || []).forEach(d => csv += `${d.soc};${d.im};${d.ch||''};${d.dt||''};${d.no||''}\n`);
+  } else if (section === 'garage') {
+    csv = 'Societe;Immatriculation;Garage;Entree;Sortie;Jours\n';
+    (doc.ga || []).forEach(g => csv += `${g.soc};${g.im};${g.gar||''};${g.de||''};${g.ds||''};${g.ji||''}\n`);
+  } else if (section === 'dispo') {
+    csv = 'Societe;Immatriculation;Modele;Note\n';
+    (doc.di || []).forEach(d => csv += `${d.soc};${d.im};${d.mo||''};${d.no||''}\n`);
+  } else if (section === 'vacances') {
+    csv = 'Chauffeur;Societe;Debut;Fin;Note\n';
+    (doc.va || []).forEach(v => csv += `${v.ch};${v.soc||''};${v.deb||''};${v.fin||''};${v.no||''}\n`);
+  } else if (section === 'prospects') {
+    csv = 'Nom;Contact;Besoin;Statut;Note\n';
+    (doc.pr || []).forEach(p => csv += `${p.nom};${p.ct||''};${p.bs||''};${p.stu||''};${p.no||''}\n`);
+  }
+
+  await audit(req.user, 'csv_export', { section });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename=opportix_${section}_${new Date().toISOString().slice(0,10)}.csv`);
+  res.send('\uFEFF' + csv); // BOM for Excel compatibility
 });
 
 /* ═══ AUDIT ROUTE ═══ */
@@ -307,7 +380,7 @@ async function startServer() {
     process.exit(1);
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  const server = httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  ✅ OPPORTIX Dashboard API`);
     console.log(`  → Local:   http://localhost:${PORT}`);
     const nets = require('os').networkInterfaces();
