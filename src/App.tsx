@@ -195,8 +195,19 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const im=entry.im.toUpperCase().trim();
         const veh=[...urban,...green].find((v:any)=>v.im===im);
         const nd=[...disp,{...entry,mo:entry.mo||veh?.mo||"",id:uid()}];
-        setDisp(nd);sv({ret:n,di:nd});
+        // Mettre chauffeur à BUREAU et statut IMMO dans la flotte
+        const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+        const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+        setUrban(nu);setGreen(ng);setDisp(nd);
+        sv({u:nu,g:ng,ret:n,di:nd});
       }else{sv({ret:n});}
+    }else if(type==="disp"&&entry.im){
+      // Ajout manuel en dispo → chauffeur BUREAU + IMMO dans la flotte
+      const im=entry.im.toUpperCase().trim();
+      const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      setUrban(nu);setGreen(ng);
+      sv({u:nu,g:ng,di:n});
     }else{
       sv({[k]:n});
     }
@@ -216,7 +227,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const im=item.im.toUpperCase().trim();
       const veh=[...urban,...green].find((v:any)=>v.im===im);
       const nd=[...disp,{soc:item.soc,im,mo:item.mo||veh?.mo||"",no:item.no||"",id:uid()}];
-      setDisp(nd);sv({dep:n,di:nd});
+      // Remettre chauffeur à BUREAU et IMMO dans la flotte
+      const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      setUrban(nu);setGreen(ng);setDisp(nd);
+      sv({u:nu,g:ng,dep:n,di:nd});
     }else if(type==="rets"&&item?.im){
       const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());
       setDisp(nd);sv({ret:n,di:nd});
