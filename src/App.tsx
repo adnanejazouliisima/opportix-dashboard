@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 
+/* ═══ TOAST ═══ */
+function Toast({msg,type,onClose}:{msg:string,type:"ok"|"err",onClose:()=>void}){
+  useEffect(()=>{const t=setTimeout(onClose,3500);return()=>clearTimeout(t);},[onClose]);
+  return <div style={{position:"fixed",top:16,right:16,zIndex:9999,padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:600,color:"#fff",background:type==="ok"?"#1E8A52":"#C0392B",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fi .2s ease both",cursor:"pointer"}} onClick={onClose}>{msg}</div>;
+}
+
 /* ═══ AUTH ═══ */
 
 function LoginPage({onLogin}:any){
@@ -99,6 +105,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [usersList, setUsersList] = useState<any[]>([]);
   const ce=useRef<HTMLDivElement>(null);
   const savingRef=useRef(false);
+  const [toast,setToast]=useState<{msg:string,type:"ok"|"err"}|null>(null);
+  const [saving,setSaving]=useState(false);
 
   useEffect(()=>{ce.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   
@@ -109,6 +117,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const res=await fetch(`${API_URL}/api/data`,{
         headers:{"Authorization":`Bearer ${userToken}`}
       });
+      if(res.status===401){
+        const d=await res.json().catch(()=>({}));
+        if(d.expired){setToast({msg:"Session expirée — reconnectez-vous",type:"err"});setTimeout(onLogout,2000);}
+        return;
+      }
       if(res.ok){
         const data=await res.json();
         if(data.u) setUrban(data.u);
@@ -142,9 +155,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       dep:o.dep??deps,ret:o.ret??rets,
       di:o.di??disp,va:o.va??vacs,pr:o.pr??pros,msgs:o.msgs??msgs
     };
-    savingRef.current=true;
-    try{await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });}catch(e){}
-    finally{savingRef.current=false;}
+    savingRef.current=true;setSaving(true);
+    try{
+      const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
+      if(!res.ok){const e=await res.json().catch(()=>({error:"Erreur serveur"}));setToast({msg:e.error,type:"err"});}
+    }catch(e){setToast({msg:"Erreur réseau — modifications non sauvegardées",type:"err"});}
+    finally{savingRef.current=false;setSaving(false);}
   };
 
   const all=[...urban.map(v=>({...v,soc:"URBAN NEO"})),...green.map(v=>({...v,soc:"GREEN"}))];
@@ -246,11 +262,20 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
   return(
     <div style={{minHeight:"100vh",background:"#F3F3F1",color:"#333",fontFamily:"'Outfit',system-ui,sans-serif",fontSize:13}}>
+      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+      {saving&&<div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"#E8633A",zIndex:9998,animation:"fi .2s ease both"}}/>}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
         @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}.ani{animation:fi .2s ease both}
         .rw:hover{background:#F7F7F5!important}.tb:hover{background:#EAEAE8!important}input:focus,select:focus{outline:none;border-color:#E8633A!important}.dl:hover{background:#FEE!important;color:#C0392B!important}
+        @media(max-width:768px){
+          .hide-mobile{display:none!important}
+          .grid-mobile{grid-template-columns:1fr!important}
+          .header-pills{display:none!important}
+          .nav-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
+          .nav-scroll::-webkit-scrollbar{display:none}
+        }
       `}</style>
 
       <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
@@ -259,8 +284,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           <div><div style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/>
-          <div style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
+          <span className="header-pills" style={{display:"flex",gap:6}}><Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/></span>
+          <div className="hide-mobile" style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
             <span style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.displayName}</span>
@@ -270,7 +295,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         </div>
       </header>
 
-      <nav style={{display:"flex",gap:2,padding:"6px 20px",background:"#F3F3F1",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",overflowX:"auto"}}>
+      <nav className="nav-scroll" style={{display:"flex",gap:2,padding:"6px 20px",background:"#F3F3F1",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",overflowX:"auto"}}>
         {TABS.map(t=><button key={t.k} className="tb" onClick={()=>go(t.k)} style={{padding:"6px 12px",borderRadius:6,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",background:tab===t.k?"#fff":"transparent",color:tab===t.k?"#1A1A1A":"#999",boxShadow:tab===t.k?"0 1px 2px rgba(0,0,0,0.05)":"none",transition:"all .15s"}}>{t.l}</button>)}
       </nav>
 
@@ -293,7 +318,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               ))}
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <DiffBlock title="DEPARTS" titleBg="#FDECEA" color="#D94F3B" count={deps.length}
                 heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE"]} cols="65px 90px 1fr 70px" data={deps} maxH={160}
                 renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span></>}
@@ -355,7 +380,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 <Pill c="#3A9BD5" t={`${urban.length} Urban Neo`}/><Pill c="#2FAA6B" t={`${green.length} Green`}/><Pill c="#1A1A1A" t={`${all.length} total`}/>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <MiniTbl title="VEHICULES URBAN NEO" titleBg="#D6E9F8" count={`${urban.length} voitures`} countBad={nUI>0?`${nUI} a l'arret`:null}
                 heads={["IMMAT","MARQUE","MODELE","STATUT","CHAUFFEUR"]} cols="85px 60px 70px 45px 1fr" data={urban} maxH={500}
                 renderRow={(v:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,color:"#1A1A1A",fontSize:10}}>{v.im}</span><span style={{color:"#666"}}>{v.mq}</span><span style={{color:"#666"}}>{v.mo}</span><StBadge s={v.st}/><span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span></>}
@@ -579,27 +604,30 @@ function AddBox({fields,form,setForm,onAdd,extra}:any){
 
 function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setForm,addItem,delItem,cols,heads,rr,useIdx,user}:any){
   const open=showAdd===type;
+  const [formErr,setFormErr]=useState("");
+  const [delConfirm,setDelConfirm]=useState<any>(null);
   const initDefaults=()=>{const o:any={};fields.forEach(([,k,,opts]:any)=>{if(opts)o[k]=opts[0];});return o;};
   return <div className="ani">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
       <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A"}}>{title} <span style={{fontSize:11,color:"#BBB",fontWeight:400}}>{data.length}</span></div>
-      {user.role!=='lecteur' && <button onClick={()=>{open?setShowAdd(null):setShowAdd(type);setForm(initDefaults());}} style={oBtn(color,open)}>{open?"Annuler":"+ Ajouter"}</button>}
+      {user.role!=='lecteur' && <button onClick={()=>{open?setShowAdd(null):setShowAdd(type);setForm(initDefaults());setFormErr("");}} style={oBtn(color,open)}>{open?"Annuler":"+ Ajouter"}</button>}
     </div>
     {open&&<div className="ani" style={{background:"#fff",borderRadius:8,padding:14,border:"1px solid #E5E5E3",marginBottom:10}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8}}>
         {fields.map(([l,k,p,opts]:any)=><div key={k}><div style={{fontSize:10,fontWeight:600,color:"#888",marginBottom:3}}>{l}</div>
           {opts?<select value={form[k]||opts[0]} onChange={(e:React.ChangeEvent<HTMLSelectElement>)=>setForm({...form,[k]:e.target.value})} style={{...iS,width:"100%",background:"#FAFAF8"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-          :<input value={form[k]||""} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>setForm({...form,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",background:"#FAFAF8"}}/>}
+          :<input value={form[k]||""} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{setForm({...form,[k]:e.target.value});setFormErr("");}} placeholder={p} style={{...iS,width:"100%",background:"#FAFAF8"}}/>}
         </div>)}
       </div>
-      <button onClick={()=>{const req=type==="vacs"?form.ch:type==="pros"?form.nom:form.im;if(!req?.trim())return;addItem(type,{...form,im:form.im?.toUpperCase().trim()});}} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
+      {formErr&&<div style={{fontSize:11,color:"#C0392B",marginTop:6}}>{formErr}</div>}
+      <button onClick={()=>{const req=type==="vacs"?form.ch:type==="pros"?form.nom:type==="users"?form.username:form.im;if(!req?.trim()){setFormErr("Veuillez remplir les champs obligatoires (*)");return;}setFormErr("");addItem(type,{...form,im:form.im?.toUpperCase().trim()});}} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
     </div>}
     <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
       <div style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>{heads.map((h:string,i:number)=><span key={i}>{h}</span>)}</div>
       <div style={{maxHeight:420,overflowY:"auto"}}>
         {data.map((d:any,i:number)=><div key={useIdx?i:d.id} className="rw" style={{display:"grid",gridTemplateColumns:cols,padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
           {rr(d)}
-          {user.role!=='lecteur'&&<span style={{textAlign:"right"}}><button className="dl" onClick={()=>delItem(type,useIdx?i:d.id,useIdx)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></span>}
+          {user.role!=='lecteur'&&<span style={{textAlign:"right"}}>{delConfirm===(useIdx?i:d.id)?<span style={{display:"inline-flex",gap:2}}><button onClick={()=>{delItem(type,useIdx?i:d.id,useIdx);setDelConfirm(null);}} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelConfirm(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></span>:<button className="dl" onClick={()=>setDelConfirm(useIdx?i:d.id)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button>}</span>}
         </div>)}
         {data.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun element</div>}
       </div>
