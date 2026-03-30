@@ -11,7 +11,7 @@
     "id": 2,
     "username": "yannis",
     "displayName": "Yannis",
-    "role": "editeur",
+    "role": "admin",
     "pole": "activite",
     "password": "$2b$10$fTfUL18wIOjfE4fiKZsDZu35sH2JuQ6guX2y6d1nCosTTSlb8Q64W"
   },

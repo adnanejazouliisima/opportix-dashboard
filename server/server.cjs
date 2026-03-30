@@ -23,6 +23,7 @@ async function connectDB() {
   db = client.db();
   console.log('  ✅ MongoDB connecte');
   await seedIfEmpty();
+  await runMigrations();
 }
 
 async function seedIfEmpty() {
@@ -49,6 +50,15 @@ async function seedIfEmpty() {
       console.log('  → Donnees flotte importees');
     }
   }
+}
+
+async function runMigrations() {
+  // Make yannis an admin
+  const result = await db.collection('users').updateOne(
+    { username: 'yannis', role: { $ne: 'admin' } },
+    { $set: { role: 'admin' } }
+  );
+  if (result.modifiedCount > 0) console.log('  → yannis promu admin');
 }
 
 /* ═══ AUTH MIDDLEWARE ═══ */
@@ -186,10 +196,13 @@ app.put('/api/users/:id/role', auth, canManageUsers, async (req, res) => {
   const user = await db.collection('users').findOne({ id: userId });
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouve' });
 
-  if (req.user.role === 'editeur') {
-    if (req.body.role === 'admin' || user.role === 'admin') {
-      return res.status(403).json({ error: 'Action non autorisee pour un editeur' });
-    }
+  // Nobody can change an admin's role
+  if (user.role === 'admin') {
+    return res.status(403).json({ error: 'Impossible de modifier le role d\'un admin' });
+  }
+  // Editors cannot promote to admin
+  if (req.user.role === 'editeur' && req.body.role === 'admin') {
+    return res.status(403).json({ error: 'Un editeur ne peut pas promouvoir en admin' });
   }
 
   await db.collection('users').updateOne({ id: userId }, { $set: { role: req.body.role } });
