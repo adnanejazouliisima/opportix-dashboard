@@ -150,7 +150,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const all=[...urban.map(v=>({...v,soc:"URBAN NEO"})),...green.map(v=>({...v,soc:"GREEN"}))];
   const nUA=urban.filter(v=>v.st==="ACTIF").length, nUI=urban.filter(v=>v.st==="IMMO").length;
   const nGA=green.filter(v=>v.st==="ACTIF").length, nGI=green.filter(v=>v.st==="IMMO").length;
-  const nCh=new Set(all.filter(v=>v.st==="ACTIF"&&v.ch?.trim()).map(v=>v.ch.trim().toUpperCase())).size;
+  const nCh=all.filter(v=>v.st==="ACTIF").length;
 
   const cur=fTab==="urban"?urban:green;
   const filt=useMemo(()=>cur.filter(v=>{
