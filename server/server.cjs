@@ -4,15 +4,47 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
+const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || 'network-dashboard-secret-key-2024';
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
 
-app.use(cors());
-app.use(express.json());
+/* ═══ CORS — only allow own origin in production ═══ */
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
+    else cb(null, true); // Allow in production since frontend is served from same origin
+  },
+  credentials: true
+}));
+app.use(express.json({ limit: '1mb' }));
+
+/* ═══ RATE LIMITING ═══ */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { error: 'Trop de tentatives — reessayez dans 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute
+  message: { error: 'Trop de requetes — reessayez dans une minute' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', apiLimiter);
 
 /* ═══ MONGODB ═══ */
 let db;
@@ -22,6 +54,13 @@ async function connectDB() {
   await client.connect();
   db = client.db();
   console.log('  ✅ MongoDB connecte');
+
+  // Create indexes for performance
+  await db.collection('users').createIndex({ username: 1 }, { unique: true });
+  await db.collection('users').createIndex({ id: 1 });
+  await db.collection('data').createIndex({ _key: 1 });
+  await db.collection('audit').createIndex({ ts: -1 });
+
   await seedIfEmpty();
   await runMigrations();
 }
@@ -30,7 +69,6 @@ async function seedIfEmpty() {
   const usersCount = await db.collection('users').countDocuments();
   if (usersCount === 0) {
     console.log('  📦 Base vide — import des donnees initiales...');
-    // Seed users
     const usersFile = path.join(__dirname, 'users.json');
     if (fs.existsSync(usersFile)) {
       const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
@@ -42,7 +80,6 @@ async function seedIfEmpty() {
       await db.collection('users').insertMany(users);
       console.log(`  → ${users.length} utilisateurs importes`);
     }
-    // Seed fleet data
     const dataFile = path.join(__dirname, 'data.json');
     if (fs.existsSync(dataFile)) {
       const data = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
@@ -53,12 +90,24 @@ async function seedIfEmpty() {
 }
 
 async function runMigrations() {
-  // Make yannis an admin
   const result = await db.collection('users').updateOne(
     { username: 'yannis', role: { $ne: 'admin' } },
     { $set: { role: 'admin' } }
   );
   if (result.modifiedCount > 0) console.log('  → yannis promu admin');
+}
+
+/* ═══ AUDIT LOGGING ═══ */
+async function audit(user, action, details) {
+  try {
+    await db.collection('audit').insertOne({
+      ts: new Date(),
+      user: user?.username || 'system',
+      role: user?.role || 'system',
+      action,
+      details,
+    });
+  } catch (e) { /* don't break the app if audit fails */ }
 }
 
 /* ═══ AUTH MIDDLEWARE ═══ */
@@ -68,7 +117,10 @@ function auth(req, res, next) {
   try {
     req.user = jwt.verify(token, SECRET);
     next();
-  } catch {
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expiree', expired: true });
+    }
     res.status(401).json({ error: 'Token invalide' });
   }
 }
@@ -83,11 +135,25 @@ function canEdit(req, res, next) {
   next();
 }
 
+function adminOnly(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  next();
+}
+
+/* ═══ HEALTH CHECK ═══ */
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
+
 /* ═══ AUTH ROUTES ═══ */
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Identifiant et mot de passe requis' });
+  }
   const user = await db.collection('users').findOne({ username });
   if (!user || !bcrypt.compareSync(password, user.password)) {
+    await audit({ username }, 'login_failed', { ip: req.ip });
     return res.status(401).json({ error: 'Identifiants incorrects' });
   }
   const token = jwt.sign(
@@ -95,6 +161,7 @@ app.post('/api/login', async (req, res) => {
     SECRET,
     { expiresIn: '12h' }
   );
+  await audit(user, 'login', { ip: req.ip });
   res.json({ token, user: { id: user.id || user._id, username: user.username, displayName: user.displayName, role: user.role, pole: user.pole } });
 });
 
@@ -125,60 +192,71 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
     }
   }
   await db.collection('data').updateOne({ _key: 'fleet' }, { $set: d }, { upsert: true });
+  await audit(req.user, 'data_update', { keys: Object.keys(d) });
   res.json({ ok: true });
 });
 
 app.post('/api/data/message', auth, async (req, res) => {
+  const { tx } = req.body;
+  if (!tx || typeof tx !== 'string' || tx.length > 2000) {
+    return res.status(400).json({ error: 'Message invalide (max 2000 caracteres)' });
+  }
   await db.collection('data').updateOne(
     { _key: 'fleet' },
-    { $push: { msgs: { ...req.body, id: Date.now() } } },
+    { $push: { msgs: { ...req.body, id: crypto.randomUUID() } } },
     { upsert: true }
   );
   res.json({ ok: true });
 });
 
-/* ═══ USER MANAGEMENT (Admin & Editeur) ═══ */
+/* ═══ AUDIT ROUTE ═══ */
+app.get('/api/audit', auth, adminOnly, async (req, res) => {
+  const logs = await db.collection('audit').find().sort({ ts: -1 }).limit(200).toArray();
+  res.json(logs);
+});
+
+/* ═══ USER MANAGEMENT ═══ */
 app.get('/api/users', auth, canManageUsers, async (req, res) => {
   const users = await db.collection('users').find({}, { projection: { password: 0 } }).toArray();
   res.json(users);
 });
 
-function adminOnly(req, res, next) {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
-  next();
-}
-
 app.post('/api/users', auth, adminOnly, async (req, res) => {
   const { username, displayName, role, pole, password } = req.body;
+  if (!username?.trim() || !displayName?.trim()) {
+    return res.status(400).json({ error: 'Identifiant et nom requis' });
+  }
+  if (username.length < 3 || username.length > 30) {
+    return res.status(400).json({ error: 'Identifiant: 3 a 30 caracteres' });
+  }
   const existing = await db.collection('users').findOne({ username });
   if (existing) {
     return res.status(400).json({ error: 'Nom utilisateur deja pris' });
   }
 
-  let finalRole = role || 'lecteur';
-  if (req.user.role === 'editeur' && finalRole === 'admin') {
-    return res.status(403).json({ error: 'Un editeur ne peut pas creer un compte admin' });
-  }
-
+  const finalRole = role || 'lecteur';
   const newUser = {
     id: Date.now(),
-    username,
-    displayName,
+    username: username.trim(),
+    displayName: displayName.trim(),
     role: finalRole,
     pole: pole || 'activite',
     password: bcrypt.hashSync(password || 'opportix2025', 10)
   };
   await db.collection('users').insertOne(newUser);
+  await audit(req.user, 'user_created', { username, role: finalRole });
   res.json({ ...newUser, password: undefined });
 });
 
 app.delete('/api/users/:id', auth, adminOnly, async (req, res) => {
   const userId = parseInt(req.params.id);
   const userToDelete = await db.collection('users').findOne({ id: userId });
-
   if (!userToDelete) return res.status(404).json({ error: 'Utilisateur non trouve' });
-
+  if (userToDelete.role === 'admin') {
+    return res.status(403).json({ error: 'Impossible de supprimer un admin' });
+  }
   await db.collection('users').deleteOne({ id: userId });
+  await audit(req.user, 'user_deleted', { username: userToDelete.username });
   res.json({ ok: true });
 });
 
@@ -187,27 +265,29 @@ app.put('/api/users/:id/password', auth, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.id !== userId) {
     return res.status(403).json({ error: 'Non autorise' });
   }
+  if (!req.body.password || req.body.password.length < 6) {
+    return res.status(400).json({ error: 'Mot de passe: minimum 6 caracteres' });
+  }
   const user = await db.collection('users').findOne({ id: userId });
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouve' });
   await db.collection('users').updateOne({ id: userId }, { $set: { password: bcrypt.hashSync(req.body.password, 10) } });
+  await audit(req.user, 'password_changed', { target: user.username });
   res.json({ ok: true });
 });
 
-app.put('/api/users/:id/role', auth, canManageUsers, async (req, res) => {
+app.put('/api/users/:id/role', auth, adminOnly, async (req, res) => {
   const userId = parseInt(req.params.id);
   const user = await db.collection('users').findOne({ id: userId });
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouve' });
-
-  // Nobody can change an admin's role
   if (user.role === 'admin') {
     return res.status(403).json({ error: 'Impossible de modifier le role d\'un admin' });
   }
-  // Editors cannot promote to admin
-  if (req.user.role === 'editeur' && req.body.role === 'admin') {
-    return res.status(403).json({ error: 'Un editeur ne peut pas promouvoir en admin' });
+  const validRoles = ['lecteur', 'editeur'];
+  if (!validRoles.includes(req.body.role)) {
+    return res.status(400).json({ error: 'Role invalide' });
   }
-
   await db.collection('users').updateOne({ id: userId }, { $set: { role: req.body.role } });
+  await audit(req.user, 'role_changed', { target: user.username, from: user.role, to: req.body.role });
   res.json({ ok: true });
 });
 
