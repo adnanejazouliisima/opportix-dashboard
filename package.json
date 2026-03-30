@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/server.cjs",
+    "dev:full": "concurrently \"npm run dev\" \"node server/server.cjs\""
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
@@ -23,7 +25,6 @@
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1"
+    "react-dom": "^19.2.4"
   }
 }

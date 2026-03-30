@@ -6,8 +6,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3000;
-const SECRET = 'network-dashboard-secret-key-2024';
+const PORT = process.env.PORT || 3000;
+const SECRET = process.env.JWT_SECRET || 'network-dashboard-secret-key-2024';
 
 app.use(cors());
 app.use(express.json());
@@ -85,7 +85,20 @@ app.get('/api/data', auth, (req, res) => {
 });
 
 app.put('/api/data', auth, canEdit, (req, res) => {
-  writeJSON(DATA_FILE, req.body);
+  const d = req.body;
+  const validKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'msgs'];
+  if (!d || typeof d !== 'object' || Array.isArray(d)) {
+    return res.status(400).json({ error: 'Corps de requete invalide' });
+  }
+  for (const key of Object.keys(d)) {
+    if (!validKeys.includes(key)) {
+      return res.status(400).json({ error: `Cle non autorisee: ${key}` });
+    }
+    if (!Array.isArray(d[key])) {
+      return res.status(400).json({ error: `La cle "${key}" doit etre un tableau` });
+    }
+  }
+  writeJSON(DATA_FILE, d);
   res.json({ ok: true });
 });
 
@@ -180,13 +193,41 @@ if (fs.existsSync(distPath)) {
   app.use((req, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  ✅ NETWORK Dashboard API`);
-  console.log(`  → Local:   http://localhost:${PORT}`);
-  const nets = require('os').networkInterfaces();
-  Object.values(nets).flat().filter(n => n.family === 'IPv4' && !n.internal).forEach(n => {
-    console.log(`  → Reseau:  http://${n.address}:${PORT}`);
+function startServer() {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n  ✅ NETWORK Dashboard API`);
+    console.log(`  → Local:   http://localhost:${PORT}`);
+    const nets = require('os').networkInterfaces();
+    Object.values(nets).flat().filter(n => n.family === 'IPv4' && !n.internal).forEach(n => {
+      console.log(`  → Reseau:  http://${n.address}:${PORT}`);
+    });
+    console.log(`\n  Comptes par defaut:`);
+    console.log(`  → (username) / opportix2025\n`);
   });
-  console.log(`\n  Comptes par defaut:`);
-  console.log(`  → (username) / opportix2025\n`);
-});
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`  ⚠️  Port ${PORT} occupé — libération en cours...`);
+      const { execSync } = require('child_process');
+      try {
+        if (process.platform === 'win32') {
+          const out = execSync(`netstat -ano | findstr :${PORT}`).toString();
+          const line = out.split('\n').find(l => l.includes('LISTENING'));
+          if (line) {
+            const pid = line.trim().split(/\s+/).pop();
+            execSync(`taskkill /F /PID ${pid}`);
+          }
+        } else {
+          execSync(`fuser -k ${PORT}/tcp`);
+        }
+        console.log(`  ✅ Port libéré — redémarrage...`);
+        setTimeout(startServer, 500);
+      } catch (e) {
+        console.error(`  ❌ Impossible de libérer le port ${PORT}`);
+        process.exit(1);
+      }
+    }
+  });
+}
+
+startServer();
