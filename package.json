@@ -10,14 +10,13 @@
     "start": "node server/server.cjs",
     "dev:full": "concurrently \"npm run dev\" \"node server/server.cjs\""
   },
-  "devDependencies": {
+  "devDependencies": {},
+  "dependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "~5.9.3",
-    "vite": "^8.0.1"
-  },
-  "dependencies": {
+    "vite": "^8.0.1",
     "bcryptjs": "^3.0.3",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
