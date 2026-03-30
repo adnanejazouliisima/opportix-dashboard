@@ -124,7 +124,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(data.u) setUrban(data.u);
         if(data.g) setGreen(data.g);
         if(data.ga) setGarage(data.ga);
-        if(data.dep) setDeps(data.dep);
+        if(data.dep) setDeps([...data.dep].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(b.dt)-p(a.dt);}));
         if(data.ret) setRets(data.ret);
         if(data.di) setDisp(data.di);
         if(data.va) setVacs(data.va);
@@ -177,8 +177,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const add=(type:string,entry:any)=>{
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
     const[arr,set,k]=m[type];
+    const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=[...arr,(type==="urban"||type==="green")?{...entry}:{...entry,id:uid()}];
-    set(n);
+    if(type==="deps") set(sortDeps(n)); else set(n);
     
     // Auto-remove from dispo when adding depart, auto-add to dispo when adding retour
     if(type==="deps"&&entry.im){
@@ -453,7 +454,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           </div>
         )}
 
-        {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={[...deps].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(b.dt)-p(a.dt);})} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
+        {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={deps} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} user={user}
           cols="80px 100px 1fr 80px 1fr 60px" heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE","NOTE",""]}
