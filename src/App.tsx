@@ -185,9 +185,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const im=entry.im.toUpperCase().trim();
       // Retirer de DISPO
       const nd=disp.filter((d:any)=>d.im!==im);
-      // Changer IMMO → ACTIF et mettre à jour le chauffeur dans urban/green
-      const nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
-      const ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
+      const exists=[...urban,...green].find((v:any)=>v.im===im);
+      let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
+      let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
+      // Si la voiture n'existe pas dans la flotte, l'ajouter
+      if(!exists){
+        const newVeh={im,mq:"",mo:"",le:"",st:"ACTIF",ch:entry.ch||""};
+        if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
+      }
       setUrban(nu);setGreen(ng);setDisp(nd);
       sv({u:nu,g:ng,dep:n,di:nd});
     }else if(type==="rets"&&entry.im){
