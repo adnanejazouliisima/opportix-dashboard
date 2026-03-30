@@ -599,7 +599,7 @@ function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setForm,add
       <div style={{maxHeight:420,overflowY:"auto"}}>
         {data.map((d:any,i:number)=><div key={useIdx?i:d.id} className="rw" style={{display:"grid",gridTemplateColumns:cols,padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
           {rr(d)}
-          <span style={{textAlign:"right"}}><button className="dl" onClick={()=>delItem(type,useIdx?i:d.id,useIdx)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></span>
+          {user.role!=='lecteur'&&<span style={{textAlign:"right"}}><button className="dl" onClick={()=>delItem(type,useIdx?i:d.id,useIdx)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></span>}
         </div>)}
         {data.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun element</div>}
       </div>
