@@ -453,7 +453,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           </div>
         )}
 
-        {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={deps} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
+        {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={[...deps].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return 9999;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(a.dt)-p(b.dt);})} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} user={user}
           cols="80px 100px 1fr 80px 1fr 60px" heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE","NOTE",""]}
