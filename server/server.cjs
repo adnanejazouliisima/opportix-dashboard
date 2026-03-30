@@ -143,7 +143,12 @@ app.get('/api/users', auth, canManageUsers, async (req, res) => {
   res.json(users);
 });
 
-app.post('/api/users', auth, canManageUsers, async (req, res) => {
+function adminOnly(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  next();
+}
+
+app.post('/api/users', auth, adminOnly, async (req, res) => {
   const { username, displayName, role, pole, password } = req.body;
   const existing = await db.collection('users').findOne({ username });
   if (existing) {
@@ -167,14 +172,11 @@ app.post('/api/users', auth, canManageUsers, async (req, res) => {
   res.json({ ...newUser, password: undefined });
 });
 
-app.delete('/api/users/:id', auth, canManageUsers, async (req, res) => {
+app.delete('/api/users/:id', auth, adminOnly, async (req, res) => {
   const userId = parseInt(req.params.id);
   const userToDelete = await db.collection('users').findOne({ id: userId });
 
   if (!userToDelete) return res.status(404).json({ error: 'Utilisateur non trouve' });
-  if (req.user.role === 'editeur' && userToDelete.role === 'admin') {
-    return res.status(403).json({ error: 'Un editeur ne peut pas supprimer un compte admin' });
-  }
 
   await db.collection('users').deleteOne({ id: userId });
   res.json({ ok: true });

@@ -496,9 +496,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
              if(res.ok) { setUsersList(usersList.filter((u:any)=>u.id!==id)); }
              else { alert((await res.json()).error); }
           }}
-          cols="30px 100px 150px 100px 100px 80px" heads={["","IDENTIFIANT","NOM","RÔLE","PÔLE",""]}
-          rr={(u:any)=><><span style={{fontWeight:800}}>{u.role==='admin'?'🛡️':'👤'}</span><span style={{fontWeight:600}}>{u.username}</span><span>{u.displayName}</span><span>{u.role}</span><span>{u.pole}</span></>}
-          user={user}
+          cols={user.role==='admin'?"30px 100px 150px 100px 100px 90px 80px":"30px 100px 150px 100px 100px 80px"} heads={user.role==='admin'?["","IDENTIFIANT","NOM","RÔLE","PÔLE","ACTION",""]:["","IDENTIFIANT","NOM","RÔLE","PÔLE",""]}
+          rr={(u:any)=><><span style={{fontWeight:800}}>{u.role==='admin'?'🛡️':'👤'}</span><span style={{fontWeight:600}}>{u.username}</span><span>{u.displayName}</span><span>{u.role}</span><span>{u.pole}</span>{user.role==='admin'&&<span>{u.role!=='admin'?<button onClick={async()=>{const nr=u.role==='lecteur'?'editeur':'lecteur';const res=await fetch('/api/users/'+u.id+'/role',{method:'PUT',headers,body:JSON.stringify({role:nr})});if(res.ok){setUsersList(usersList.map((x:any)=>x.id===u.id?{...x,role:nr}:x));}else{alert((await res.json()).error);}}} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:u.role==='editeur'?"#E8F8F0":"#FDF4E3",color:u.role==='editeur'?"#1E8A52":"#B7791F",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{u.role==='lecteur'?'→ Editeur':'→ Lecteur'}</button>:<span style={{fontSize:9,color:"#AAA"}}>—</span>}</span>}</>}
+          user={{...user, role: user.role==='admin'?'admin':'lecteur'}}
         />
       </div>
     </div>
