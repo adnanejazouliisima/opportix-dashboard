@@ -192,7 +192,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       sv({u:nu,g:ng,dep:n,di:nd});
     }else if(type==="rets"&&entry.im){
       if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
-        const nd=[...disp,{...entry,id:uid()}];
+        const im=entry.im.toUpperCase().trim();
+        const veh=[...urban,...green].find((v:any)=>v.im===im);
+        const nd=[...disp,{...entry,mo:entry.mo||veh?.mo||"",id:uid()}];
         setDisp(nd);sv({ret:n,di:nd});
       }else{sv({ret:n});}
     }else{
@@ -211,7 +213,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     
     // Auto-add to dispo when deleting depart, auto-remove from dispo when deleting retour
     if(type==="deps"&&item?.im&&!disp.find((d:any)=>d.im===item.im.toUpperCase().trim())){
-      const nd=[...disp,{soc:item.soc,im:item.im.toUpperCase().trim(),mo:item.mo||"",no:item.no||"",id:uid()}];
+      const im=item.im.toUpperCase().trim();
+      const veh=[...urban,...green].find((v:any)=>v.im===im);
+      const nd=[...disp,{soc:item.soc,im,mo:item.mo||veh?.mo||"",no:item.no||"",id:uid()}];
       setDisp(nd);sv({dep:n,di:nd});
     }else if(type==="rets"&&item?.im){
       const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());

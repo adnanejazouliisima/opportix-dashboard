@@ -766,21 +766,25 @@
     {
       "im": "HE-329-SZ",
       "soc": "URBAN NEO",
+      "mo": "EV3",
       "id": 1711792800006
     },
     {
       "im": "HH-427-ND",
       "soc": "GREEN",
+      "mo": "STARIA",
       "id": 1711792800007
     },
     {
       "im": "HD-496-HZ",
       "soc": "GREEN",
+      "mo": "SEAL",
       "id": 1711792800008
     },
     {
       "im": "HD-428-HZ",
       "soc": "GREEN",
+      "mo": "SEAL",
       "id": 1711792800009
     }
   ],
