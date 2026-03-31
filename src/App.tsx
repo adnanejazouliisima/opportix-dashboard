@@ -187,11 +187,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       // Retirer de DISPO
       const nd=disp.filter((d:any)=>d.im!==im);
       const exists=[...urban,...green].find((v:any)=>v.im===im);
+      // Auto-fill modele from fleet if not provided
+      if(!entry.mo&&exists) entry.mo=exists.mo||"";
       let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
       let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
       // Si la voiture n'existe pas dans la flotte, l'ajouter
       if(!exists){
-        const newVeh={im,mq:"",mo:"",le:"",st:"ACTIF",ch:entry.ch||""};
+        const newVeh={im,mq:"",mo:entry.mo||"",le:"",st:"ACTIF",ch:entry.ch||""};
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
       setUrban(nu);setGreen(ng);setDisp(nd);
@@ -218,6 +220,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       sv({[k]:n});
     }
     setShowAdd(null);setForm({});
+  };
+  const edit=(type:string,id:any,updated:any)=>{
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
+    const[arr,set,k]=m[type];
+    const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
+    const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
+    if(type==="deps") set(sortDeps(n)); else set(n);
+    sv({[k]:n});
   };
   const del=(type:string,id:any,isIdx?:boolean)=>{
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
@@ -345,9 +355,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <DiffBlock title="DEPARTS" titleBg="#FDECEA" color="#D94F3B" count={deps.length}
-                heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE"]} cols="65px 90px 1fr 70px" data={deps} maxH={160}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"]]}
+                heads={["SOCIETE","IMMAT","MODELE","CHAUFFEUR","DATE"]} cols="65px 85px 65px 1fr 60px" data={deps} maxH={160}
+                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#666",fontSize:10}}>{d.mo||"—"}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span></>}
+                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("deps",{...f,im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("deps",id)}
                 user={user}
@@ -455,10 +465,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         )}
 
         {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={deps} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
-          fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
-          cols="80px 100px 1fr 80px 1fr 60px" heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE","NOTE",""]}
-          rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#777",fontSize:11}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
+          fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={user}
+          cols="80px 100px 80px 1fr 80px 1fr 90px" heads={["SOCIETE","IMMAT","MODELE","CHAUFFEUR","DATE","NOTE",""]}
+          rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#666",fontSize:11}}>{d.mo||"—"}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#777",fontSize:11}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="retours"&&<CrudP title="Retours" color="#2FAA6B" data={rets} type="rets" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
