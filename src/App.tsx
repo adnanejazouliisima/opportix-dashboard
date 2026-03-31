@@ -189,8 +189,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const exists=[...urban,...green].find((v:any)=>v.im===im);
       // Auto-fill modele from fleet if not provided
       if(!entry.mo&&exists) entry.mo=exists.mo||"";
-      let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
-      let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch}:v);
+      let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:entry.mo||v.mo||"",mq:entry.mq||v.mq||""}:v);
+      let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:entry.mo||v.mo||"",mq:entry.mq||v.mq||""}:v);
       // Si la voiture n'existe pas dans la flotte, l'ajouter
       if(!exists){
         const newVeh={im,mq:"",mo:entry.mo||"",le:"",st:"ACTIF",ch:entry.ch||""};
@@ -227,7 +227,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
     if(type==="deps") set(sortDeps(n)); else set(n);
-    sv({[k]:n});
+    // Sync modele/chauffeur to fleet when editing a departure
+    if(type==="deps"&&updated.im){
+      const im=(updated.im||"").toUpperCase().trim();
+      const nu=urban.map((v:any)=>v.im===im?{...v,mo:updated.mo||v.mo||"",ch:updated.ch||v.ch}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,mo:updated.mo||v.mo||"",ch:updated.ch||v.ch}:v);
+      setUrban(nu);setGreen(ng);
+      sv({[k]:n,u:nu,g:ng});
+    } else { sv({[k]:n}); }
   };
   const del=(type:string,id:any,isIdx?:boolean)=>{
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
