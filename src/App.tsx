@@ -360,6 +360,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("deps",{...f,im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("deps",id)}
+                onEdit={(id:any,updated:any)=>edit("deps",id,updated)}
                 user={user}
               />
               <DiffBlock title="RETOURS" titleBg="#D4F0E0" color="#2FAA6B" count={rets.length}

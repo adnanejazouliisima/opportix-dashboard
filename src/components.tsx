@@ -16,12 +16,17 @@ export function StBadge({s}:{s:string}){return <span style={{padding:"1px 6px",b
 export function SocBadge({s}:{s:string}){return <span style={{padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:600,background:s==="URBAN NEO"?"#E0EDFA":"#E0F5EA",color:s==="URBAN NEO"?"#2874A6":"#1E8A52"}}>{s==="URBAN NEO"?"URBAN":"GREEN"}</span>;}
 
 /* ═══ DIFFBLOCK ═══ */
-export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,useIdx,user}:any){
+export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,onEdit,useIdx,user}:any){
   const [open,setOpen]=useState(false);
   const initForm=()=>{const o:any={};formFields.forEach(([k,,, opts]:any)=>{if(opts)o[k]=opts[0];});return o;};
   const [f,setF]=useState<any>(initForm);
   const [delId,setDelId]=useState<any>(null);
+  const [editId,setEditId]=useState<any>(null);
+  const [editF,setEditF]=useState<any>({});
   const doAdd=()=>{onAdd(f);setF(initForm);setOpen(false);};
+  const startEdit=(d:any)=>{const o:any={};formFields.forEach(([k]:any)=>{o[k]=d[k]||"";});setEditF(o);setEditId(d.id);};
+  const saveEdit=()=>{if(onEdit)onEdit(editId,editF);setEditId(null);setEditF({});};
+  const actCol=onEdit?"60px":"30px";
   return(
     <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
@@ -47,20 +52,24 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
           </div>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:cols+" 30px",padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+      <div style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
         {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}<span></span>
       </div>
       <div style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
         data.map((d:any,i:number)=>(
-          <div key={d.id??d.im??i} style={{display:"grid",gridTemplateColumns:cols+" 30px",padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
-            {renderRow(d,i)}
-            <span style={{textAlign:"right"}}>
+          <div key={d.id??d.im??i} style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
+            {editId===d.id?<>{formFields.map(([k,,p,opts]:any)=><span key={k}>{opts
+              ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+              :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}/>
+            }</span>)}<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}><button onClick={saveEdit} style={{padding:"1px 4px",borderRadius:3,border:"none",background:"#1E8A52",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>X</button></span></>
+            :<>{renderRow(d,i)}
+            <span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
               {delId===(useIdx?i:d.id)
                 ?<button onClick={()=>{onDel(useIdx?i:d.id);setDelId(null);}} style={{padding:"1px 5px",borderRadius:3,border:"none",background:"#C0392B",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
-                :<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+                :<>{onEdit&&user.role!=='lecteur'&&<button onClick={()=>startEdit(d)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>&#9998;</button>}<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
               }
-            </span>
+            </span></>}
           </div>
         ))}
       </div>
