@@ -244,6 +244,40 @@ app.get('/api/archive', auth, adminOnly, async (req, res) => {
   res.json(items);
 });
 
+/* ═══ DRIVER HISTORY ═══ */
+app.get('/api/history', auth, async (req, res) => {
+  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  const data = doc || {};
+  const archives = await db.collection('archive').find({ section: { $in: ['deps', 'rets'] } }).toArray();
+  // Combine current + archived departures and returns
+  const deps = [...(data.dep || []).map(d => ({ ...d, _src: 'current' })), ...archives.filter(a => a.section === 'deps').map(a => ({ ...a.item, _src: 'archive' }))];
+  const rets = [...(data.ret || []).map(d => ({ ...d, _src: 'current' })), ...archives.filter(a => a.section === 'rets').map(a => ({ ...a.item, _src: 'archive' }))];
+  // Build driver history: group by driver name
+  const drivers = {};
+  deps.forEach(d => {
+    if (!d.ch) return;
+    const name = d.ch.toUpperCase().trim();
+    if (!drivers[name]) drivers[name] = [];
+    drivers[name].push({ type: 'depart', im: d.im, soc: d.soc, mo: d.mo || '', le: d.le || '', dt: d.dt || '', no: d.no || '' });
+  });
+  rets.forEach(d => {
+    if (!d.ch) return;
+    const name = d.ch.toUpperCase().trim();
+    if (!drivers[name]) drivers[name] = [];
+    drivers[name].push({ type: 'retour', im: d.im, soc: d.soc, mo: d.mo || '', dt: d.dt || '', no: d.no || '' });
+  });
+  // Also add current vehicle assignment from fleet
+  const fleet = [...(data.u || []), ...(data.g || [])];
+  fleet.forEach(v => {
+    if (!v.ch || v.ch === 'BUREAU' || v.ch.startsWith('GARAGE')) return;
+    const name = v.ch.toUpperCase().trim();
+    if (!drivers[name]) drivers[name] = [];
+    const hasVeh = drivers[name].find(e => e.im === v.im && e.type === 'vehicule_actuel');
+    if (!hasVeh) drivers[name].push({ type: 'vehicule_actuel', im: v.im, soc: (data.u || []).find(u => u.im === v.im) ? 'URBAN NEO' : 'GREEN', mo: v.mo || '', mq: v.mq || '', le: v.le || '', st: v.st });
+  });
+  res.json(drivers);
+});
+
 /* ═══ CSV EXPORT ═══ */
 app.get('/api/export/csv', auth, async (req, res) => {
   const doc = await db.collection('data').findOne({ _key: 'fleet' });

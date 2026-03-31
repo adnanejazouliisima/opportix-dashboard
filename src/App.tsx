@@ -100,6 +100,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [search,setSearch]=useState("");
   const [delC,setDelC]=useState<string|null>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [history,setHistory]=useState<any>({});
+  const [histSearch,setHistSearch]=useState("");
   const ce=useRef<HTMLDivElement>(null);
   const savingRef=useRef(false);
   const [toast,setToast]=useState<{msg:string,type:"ok"|"err"}|null>(null);
@@ -346,9 +348,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     setNewMsg("");
   };
 
-  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"vacances",l:"Vacances"},{k:"prospects",l:"Prospects"},{k:"messagerie",l:"Messagerie"}];
+  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"prospects",l:"Prospects"},{k:"messagerie",l:"Messagerie"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
-  const go=(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");};
+  const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
 
   const MiniTbl=({title,titleBg,count,countBad,heads,cols,data,renderRow,maxH=200}:any)=>(
     <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
@@ -564,6 +566,38 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           cols="80px 100px 1fr 70px 70px 50px 60px" heads={["SOCIETE","IMMAT","GARAGE","ENTREE","SORTIE","JOURS",""]}
           rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
         />}
+        {tab==="historique"&&(
+          <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#1A1A1A"}}>Historique conducteurs</div>
+              <button onClick={async()=>{try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}}} style={{padding:"6px 14px",borderRadius:6,border:"1px solid #E0E0DE",background:"#fff",color:"#555",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Rafraichir</button>
+            </div>
+            <input value={histSearch} onChange={e=>setHistSearch(e.target.value)} placeholder="Rechercher un conducteur..." style={{...iS,width:300}}/>
+            {Object.keys(history).length===0?<div style={{padding:30,textAlign:"center",color:"#BBB",fontSize:12}}>Cliquez sur "Rafraichir" pour charger l'historique</div>:
+            Object.entries(history).filter(([name])=>!histSearch||(name as string).toLowerCase().includes(histSearch.toLowerCase())).sort(([a],[b])=>(a as string).localeCompare(b as string)).map(([name,events]:any)=>(
+              <div key={name} style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+                <div style={{padding:"8px 12px",background:"#F5F5F3",borderBottom:"1px solid #E5E5E3",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>{name}</span>
+                  <span style={{fontSize:10,color:"#999"}}>{events.length} evenement{events.length>1?"s":""}</span>
+                </div>
+                <div style={{maxHeight:200,overflowY:"auto"}}>
+                  {events.map((e:any,i:number)=>(
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"90px 70px 100px 80px 60px 1fr",padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
+                      <span style={{fontWeight:600,color:e.type==="depart"?"#D94F3B":e.type==="retour"?"#2FAA6B":"#3A9BD5",fontSize:10}}>
+                        {e.type==="vehicule_actuel"?"VH ACTUEL":e.type==="depart"?"DEPART":"RETOUR"}
+                      </span>
+                      <span><SocBadge s={e.soc}/></span>
+                      <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{e.im}</span>
+                      <span style={{color:"#666",fontSize:10}}>{e.mo||(e.mq?`${e.mq} ${e.mo}`:"")||"—"}</span>
+                      <span style={{color:"#999",fontSize:10}}>{e.dt||e.st||"—"}</span>
+                      <span style={{color:"#AAA",fontSize:10}}>{e.no||e.le||""}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {tab==="vacances"&&<CrudP title="Vacances chauffeurs" color="#7B61FF" data={vacs} type="vacs" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} user={user}
