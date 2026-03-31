@@ -226,9 +226,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const im=entry.im.toUpperCase().trim();
       // Retirer de DISPO
       const nd=disp.filter((d:any)=>d.im!==im);
+      // Retirer du GARAGE
+      const nGa=garage.filter((g:any)=>g.im?.toUpperCase().trim()!==im);
+      if(nGa.length!==garage.length) setGarage(nGa);
       const exists=[...urban,...green].find((v:any)=>v.im===im);
-      // Auto-fill modele from fleet if not provided
+      // Auto-fill modele/leaser from fleet if not provided
       if(!entry.mo&&exists) entry.mo=exists.mo||"";
+      if(!entry.le&&exists) entry.le=exists.le||"";
       const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
       const le=(entry.le||"").toUpperCase().trim();
       let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",le:le||v.le||""}:v);
@@ -239,7 +243,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
       setUrban(nu);setGreen(ng);setDisp(nd);
-      sv({u:nu,g:ng,dep:n,di:nd});
+      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa});
     }else if(type==="rets"&&entry.im){
       if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
         const im=entry.im.toUpperCase().trim();
