@@ -210,7 +210,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
   const cur=fTab==="urban"?urban:green;
   const filt=useMemo(()=>cur.filter(v=>{
-    if(search){const s=search.toLowerCase();return v.im.toLowerCase().includes(s)||v.ch.toLowerCase().includes(s)||v.mq.toLowerCase().includes(s);}
+    if(search){const s=search.toLowerCase();return (v.im||"").toLowerCase().includes(s)||(v.ch||"").toLowerCase().includes(s)||(v.mq||"").toLowerCase().includes(s)||(v.mo||"").toLowerCase().includes(s)||(v.le||"").toLowerCase().includes(s);}
     return true;
   }),[cur,search,fTab]);
 
