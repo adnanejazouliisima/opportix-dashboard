@@ -265,6 +265,15 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,di:n});
+    }else if(type==="garage"&&entry.im){
+      // Ajout au garage → IMMO dans la flotte + retirer de dispo
+      const im=entry.im.toUpperCase().trim();
+      const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE"}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE"}:v);
+      const nd=disp.filter((d:any)=>d.im?.toUpperCase().trim()!==im);
+      if(nd.length!==disp.length) setDisp(nd);
+      setUrban(nu);setGreen(ng);
+      sv({u:nu,g:ng,[k]:n,di:nd});
     }else{
       sv({[k]:n});
     }
@@ -309,6 +318,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     }else if(type==="rets"&&item?.im){
       const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());
       setDisp(nd);sv({ret:n,di:nd});
+    }else if(type==="garage"&&item?.im){
+      // Sortie du garage → ajouter en dispo + garder IMMO dans la flotte
+      const im=item.im.toUpperCase().trim();
+      if(!disp.find((d:any)=>d.im===im)){
+        const veh=[...urban,...green].find((v:any)=>v.im===im);
+        const nd=[...disp,{soc:item.soc,im,mo:veh?.mo||"",no:`Sortie garage ${item.gar||""}`.trim(),id:uid()}];
+        setDisp(nd);sv({[k]:n,di:nd});
+      }else{sv({[k]:n});}
     }else{
       sv({[k]:n});
     }
