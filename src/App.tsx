@@ -130,13 +130,15 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           const im=d.im.toUpperCase().trim();
           const exists=[...u,...g].find((v:any)=>v.im===im);
           if(!exists){
-            const newVeh={im,mq:"",mo:d.mo||"",le:"",st:"ACTIF",ch:d.ch||""};
+            const pm=d.mo?parseMo(d.mo):{mq:"",mo:""};
+            const newVeh={im,mq:pm.mq,mo:pm.mo,le:"",st:"ACTIF",ch:d.ch||""};
             if(d.soc==="GREEN"){g=[...g,newVeh];}else{u=[...u,newVeh];}
             changed=true;
           } else if(d.mo&&!exists.mo){
             // Sync modele from departure to fleet if fleet has no model
-            if(u.find((v:any)=>v.im===im)) u=u.map((v:any)=>v.im===im?{...v,mo:d.mo}:v);
-            if(g.find((v:any)=>v.im===im)) g=g.map((v:any)=>v.im===im?{...v,mo:d.mo}:v);
+            const pm=parseMo(d.mo);
+            if(u.find((v:any)=>v.im===im)) u=u.map((v:any)=>v.im===im?{...v,mq:pm.mq,mo:pm.mo}:v);
+            if(g.find((v:any)=>v.im===im)) g=g.map((v:any)=>v.im===im?{...v,mq:pm.mq,mo:pm.mo}:v);
             changed=true;
           }
         });
@@ -186,6 +188,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     finally{savingRef.current=false;setSaving(false);}
   };
 
+  // Parse "BYD SEAL" → mq:"BYD", mo:"SEAL" (tout en majuscule)
+  const parseMo=(mo:string)=>{const parts=(mo||"").toUpperCase().trim().split(/\s+/);return parts.length>=2?{mq:parts[0],mo:parts.slice(1).join(" ")}:{mq:"",mo:parts[0]||""};};
+
   const all=[...urban.map(v=>({...v,soc:"URBAN NEO"})),...green.map(v=>({...v,soc:"GREEN"}))];
   const nUA=urban.filter(v=>v.st==="ACTIF").length, nUI=urban.filter(v=>v.st==="IMMO").length;
   const nGA=green.filter(v=>v.st==="ACTIF").length, nGI=green.filter(v=>v.st==="IMMO").length;
@@ -212,11 +217,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const exists=[...urban,...green].find((v:any)=>v.im===im);
       // Auto-fill modele from fleet if not provided
       if(!entry.mo&&exists) entry.mo=exists.mo||"";
-      let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:entry.mo||v.mo||"",mq:entry.mq||v.mq||""}:v);
-      let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:entry.mo||v.mo||"",mq:entry.mq||v.mq||""}:v);
+      const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
+      let nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||""}:v);
+      let ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:entry.ch||v.ch,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||""}:v);
       // Si la voiture n'existe pas dans la flotte, l'ajouter
       if(!exists){
-        const newVeh={im,mq:"",mo:entry.mo||"",le:"",st:"ACTIF",ch:entry.ch||""};
+        const newVeh={im,mq:pm.mq,mo:pm.mo,le:"",st:"ACTIF",ch:entry.ch||""};
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
       setUrban(nu);setGreen(ng);setDisp(nd);
@@ -253,8 +259,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     // Sync modele/chauffeur to fleet when editing a departure
     if(type==="deps"&&updated.im){
       const im=(updated.im||"").toUpperCase().trim();
-      const nu=urban.map((v:any)=>v.im===im?{...v,mo:updated.mo||v.mo||"",ch:updated.ch||v.ch}:v);
-      const ng=green.map((v:any)=>v.im===im?{...v,mo:updated.mo||v.mo||"",ch:updated.ch||v.ch}:v);
+      const pm=updated.mo?parseMo(updated.mo):{mq:"",mo:""};
+      const nu=urban.map((v:any)=>v.im===im?{...v,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",ch:updated.ch||v.ch}:v);
+      const ng=green.map((v:any)=>v.im===im?{...v,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",ch:updated.ch||v.ch}:v);
       setUrban(nu);setGreen(ng);
       sv({[k]:n,u:nu,g:ng});
     } else { sv({[k]:n}); }
