@@ -121,15 +121,38 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       }
       if(res.ok){
         const data=await res.json();
-        if(data.u) setUrban(data.u);
-        if(data.g) setGreen(data.g);
+        let u=data.u||[],g=data.g||[];
+        const depList=data.dep||[];
+        // Sync: ajouter les véhicules des départs manquants dans la flotte
+        let changed=false;
+        depList.forEach((d:any)=>{
+          if(!d.im) return;
+          const im=d.im.toUpperCase().trim();
+          const exists=[...u,...g].find((v:any)=>v.im===im);
+          if(!exists){
+            const newVeh={im,mq:"",mo:d.mo||"",le:"",st:"ACTIF",ch:d.ch||""};
+            if(d.soc==="GREEN"){g=[...g,newVeh];}else{u=[...u,newVeh];}
+            changed=true;
+          } else if(d.mo&&!exists.mo){
+            // Sync modele from departure to fleet if fleet has no model
+            if(u.find((v:any)=>v.im===im)) u=u.map((v:any)=>v.im===im?{...v,mo:d.mo}:v);
+            if(g.find((v:any)=>v.im===im)) g=g.map((v:any)=>v.im===im?{...v,mo:d.mo}:v);
+            changed=true;
+          }
+        });
+        setUrban(u);setGreen(g);
         if(data.ga) setGarage(data.ga);
-        if(data.dep) setDeps([...data.dep].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(b.dt)-p(a.dt);}));
+        if(data.dep) setDeps([...depList].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(b.dt)-p(a.dt);}));
         if(data.ret) setRets(data.ret);
         if(data.di) setDisp(data.di);
         if(data.va) setVacs(data.va);
         if(data.pr) setPros(data.pr);
         if(data.msgs) setMsgs(data.msgs);
+        // Save synced fleet if vehicles were added
+        if(changed){
+          savingRef.current=true;setSaving(true);
+          fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr,msgs:data.msgs})}).finally(()=>{savingRef.current=false;setSaving(false);});
+        }
       }
       if (user.role !== 'lecteur') {
         const uRes = await fetch('/api/users', { headers });
