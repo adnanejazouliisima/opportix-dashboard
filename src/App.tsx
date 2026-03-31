@@ -123,8 +123,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const data=await res.json();
         let u=data.u||[],g=data.g||[];
         const depList=data.dep||[];
-        // Sync: ajouter les véhicules des départs manquants dans la flotte
+        // Fix: re-parse marque/modele for all fleet vehicles (e.g. "BYD SEAL" in mo → mq:BYD, mo:SEAL)
         let changed=false;
+        const fixFleet=(arr:any[])=>arr.map((v:any)=>{
+          if(v.mo&&v.mo.includes(" ")&&!v.mq){const pm=parseMo(v.mo);changed=true;return{...v,mq:pm.mq,mo:pm.mo};}
+          return v;
+        });
+        u=fixFleet(u);g=fixFleet(g);
+        // Sync: ajouter les véhicules des départs manquants dans la flotte
         depList.forEach((d:any)=>{
           if(!d.im) return;
           const im=d.im.toUpperCase().trim();
