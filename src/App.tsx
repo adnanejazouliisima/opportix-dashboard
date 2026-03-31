@@ -165,7 +165,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         // Save synced fleet if vehicles were added
         if(changed){
           savingRef.current=true;setSaving(true);
-          fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr,msgs:data.msgs})}).finally(()=>{savingRef.current=false;setSaving(false);});
+          try{
+            await fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr,msgs:data.msgs})});
+          }catch(e){console.error("Sync save error:",e);}
+          finally{savingRef.current=false;setSaving(false);}
         }
       }
       if (user.role !== 'lecteur') {
