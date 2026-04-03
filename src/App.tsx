@@ -263,15 +263,28 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     }else if(type==="disp"&&entry.im){
       // Ajout manuel en dispo → chauffeur BUREAU + IMMO dans la flotte
       const im=entry.im.toUpperCase().trim();
-      const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
-      const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      const exists=[...urban,...green].find((v:any)=>v.im===im);
+      let nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      let ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
+      if(!exists){
+        const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
+        const newVeh={im,mq:pm.mq,mo:pm.mo,le:(entry.le||"").toUpperCase().trim(),st:"IMMO",ch:"BUREAU"};
+        if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
+      }
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,di:n});
     }else if(type==="garage"&&entry.im){
-      // Ajout au garage → IMMO dans la flotte + retirer de dispo
+      // Ajout au garage → IMMO dans la flotte + retirer de dispo (only in correct fleet)
       const im=entry.im.toUpperCase().trim();
-      const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE"}:v);
-      const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE"}:v);
+      const garLabel=entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE";
+      const exists=[...urban,...green].find((v:any)=>v.im===im);
+      let nu=entry.soc==="GREEN"?[...urban]:urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v);
+      let ng=entry.soc==="GREEN"?green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...green];
+      if(!exists){
+        const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
+        const newVeh={im,mq:pm.mq,mo:pm.mo,le:(entry.le||"").toUpperCase().trim(),st:"IMMO",ch:garLabel};
+        if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
+      }
       const nd=disp.filter((d:any)=>d.im?.toUpperCase().trim()!==im);
       if(nd.length!==disp.length) setDisp(nd);
       setUrban(nu);setGreen(ng);
