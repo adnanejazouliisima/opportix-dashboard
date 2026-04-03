@@ -28,8 +28,8 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
   const saveEdit=()=>{if(onEdit)onEdit(editId,editF);setEditId(null);setEditF({});};
   const actCol=onEdit?"60px":"30px";
   return(
-    <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
+    <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+      <div className="diff-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>{title}</span>
           <span style={{fontSize:10,fontWeight:600,color:"#666"}}>{count}</span>
@@ -37,7 +37,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
         {user.role !== 'lecteur' && <button onClick={()=>{setOpen(!open);setF(initForm);}} style={{padding:"2px 8px",borderRadius:4,border:`1px solid ${color}`,background:open?color:"transparent",color:open?"#fff":color,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{open?"Annuler":"+"}</button>}
       </div>
       {open&&(
-        <div style={{padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3"}}>
+        <div className="diff-form" style={{padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3"}}>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-end"}}>
             {formFields.map(([k,l,p,opts]:any)=>(
               <div key={k} style={{flex:"1 1 80px",minWidth:70}}>
@@ -52,13 +52,13 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
           </div>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+      <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
         {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}<span></span>
       </div>
       <div style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
         data.map((d:any,i:number)=>(
-          <div key={d.id??d.im??i} style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
+          <div key={d.id??d.im??i} className="diff-row" style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
             {editId===d.id?<>{formFields.map(([k,,p,opts]:any)=><span key={k}>{opts
               ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
               :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}/>
@@ -113,8 +113,8 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
       {formErr&&<div style={{fontSize:11,color:"#C0392B",marginTop:6}}>{formErr}</div>}
       <button onClick={()=>{const req=type==="vacs"?form.ch:type==="pros"?form.nom:type==="users"?form.username:form.im;if(!req?.trim()){setFormErr("Veuillez remplir les champs obligatoires (*)");return;}setFormErr("");addItem(type,{...form,im:form.im?.toUpperCase().trim()});}} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
     </div>}
-    <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-      <div style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>{heads.map((h:string,i:number)=><span key={i}>{h}</span>)}</div>
+    <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+      <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>{heads.map((h:string,i:number)=><span key={i}>{h}</span>)}</div>
       <div style={{maxHeight:420,overflowY:"auto"}}>
         {data.map((d:any,i:number)=><div key={useIdx?i:d.id} className="rw" style={{display:"grid",gridTemplateColumns:cols,padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
           {editId===d.id?<>{fields.map(([l,k,p,opts]:any)=><span key={k}>{opts

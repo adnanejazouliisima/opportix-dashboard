@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
 import { Toast, Pill, Sel, StBadge, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
 
-/* ═══ AUTH ═══ */
+
 
 function LoginPage({onLogin}:any){
   const [login,setLogin]=useState("");
@@ -353,26 +353,26 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
 
   const MiniTbl=({title,titleBg,count,countBad,heads,cols,data,renderRow,maxH=200}:any)=>(
-    <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
+    <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+      <div className="diff-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
         <span style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>{title}</span>
         <div style={{display:"flex",gap:6}}>
           <span style={{fontSize:11,fontWeight:600,color:"#666"}}>{count}</span>
           {countBad&&<span style={{fontSize:10,fontWeight:700,color:"#C0392B",background:"#FDECEC",padding:"1px 6px",borderRadius:4}}>{countBad}</span>}
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:cols,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+      <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
         {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}
       </div>
       <div style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
-        data.map((d:any,i:number)=><div key={d.id??d.im??i} style={{display:"grid",gridTemplateColumns:cols,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>{renderRow(d,i)}</div>)}
+        data.map((d:any,i:number)=><div key={d.id??d.im??i} className="diff-row" style={{display:"grid",gridTemplateColumns:cols,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>{renderRow(d,i)}</div>)}
       </div>
     </div>
   );
 
   return(
-    <div style={{minHeight:"100vh",background:"#F3F3F1",color:"#333",fontFamily:"'Outfit',system-ui,sans-serif",fontSize:13}}>
+    <div className="app-shell" style={{minHeight:"100vh",background:"#F3F3F1",color:"#333",fontFamily:"'Outfit',system-ui,sans-serif",fontSize:13}}>
       {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
       {saving&&<div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"#E8633A",zIndex:9998,animation:"fi .2s ease both"}}/>}
       <style>{`
@@ -387,20 +387,85 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .nav-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
           .nav-scroll::-webkit-scrollbar{display:none}
         }
+        @media(min-width:1920px){
+          :root{font-size:17px}
+          .app-shell{font-size:17px!important}
+          .app-header{padding:16px 36px!important;gap:14px!important}
+          .app-header .logo-icon{width:42px!important;height:42px!important;font-size:20px!important;border-radius:10px!important}
+          .app-header .logo-text{font-size:18px!important}
+          .header-pills span{padding:4px 12px!important;font-size:13px!important}
+          .app-header button{font-size:13px!important;padding:6px 14px!important}
+          .app-header .user-avatar{width:34px!important;height:34px!important;font-size:14px!important}
+          .app-header .user-name{font-size:14px!important}
+          .app-header .user-role{font-size:11px!important;padding:2px 8px!important}
+          .nav-scroll{padding:10px 36px!important;gap:6px!important}
+          .nav-scroll .tb{padding:10px 20px!important;font-size:15px!important;border-radius:8px!important}
+          .app-main{max-width:1800px!important;padding:24px 36px!important}
+          .app-main .stat-card{padding:16px 18px!important;border-radius:10px!important}
+          .app-main .stat-card .stat-label{font-size:12px!important}
+          .app-main .stat-card .stat-value{font-size:32px!important}
+          .app-main .stat-card .stat-sub{font-size:12px!important}
+          .grid-mobile{gap:16px!important}
+          .diff-block{border-radius:10px!important}
+          .diff-block .diff-header{padding:10px 16px!important}
+          .diff-block .diff-header span{font-size:15px!important}
+          .diff-block .diff-header button{font-size:13px!important;padding:4px 12px!important}
+          .diff-block .diff-head{padding:8px 16px!important;font-size:12px!important}
+          .diff-block .diff-row{padding:8px 16px!important;font-size:14px!important}
+          .diff-block .diff-row span{font-size:14px!important}
+          .diff-block .diff-form{padding:12px 16px!important}
+          .diff-block .diff-form input,.diff-block .diff-form select{font-size:13px!important;padding:8px 10px!important}
+          .diff-block .diff-form button{font-size:13px!important;padding:8px 16px!important;height:auto!important}
+          .rw{padding:10px 16px!important;font-size:14px!important}
+          .rw span,.rw div{font-size:14px!important}
+          .app-main input,.app-main select{font-size:14px!important;padding:10px 12px!important}
+          .app-main button{font-size:13px!important}
+          .app-main table{font-size:14px!important}
+          .app-main th,.app-main td{padding:10px 12px!important;font-size:14px!important}
+        }
+        @media(min-width:2560px){
+          :root{font-size:20px}
+          .app-shell{font-size:20px!important}
+          .app-header{padding:22px 48px!important}
+          .app-header .logo-icon{width:52px!important;height:52px!important;font-size:24px!important}
+          .app-header .logo-text{font-size:22px!important}
+          .header-pills span{padding:5px 14px!important;font-size:15px!important}
+          .app-header button{font-size:15px!important;padding:8px 18px!important}
+          .app-header .user-avatar{width:40px!important;height:40px!important;font-size:16px!important}
+          .app-header .user-name{font-size:16px!important}
+          .app-header .user-role{font-size:13px!important;padding:3px 10px!important}
+          .nav-scroll{padding:14px 48px!important;gap:8px!important}
+          .nav-scroll .tb{padding:14px 28px!important;font-size:18px!important;border-radius:10px!important}
+          .app-main{max-width:2200px!important;padding:32px 48px!important}
+          .app-main .stat-card{padding:22px 24px!important}
+          .app-main .stat-card .stat-label{font-size:14px!important}
+          .app-main .stat-card .stat-value{font-size:42px!important}
+          .app-main .stat-card .stat-sub{font-size:14px!important}
+          .grid-mobile{gap:20px!important}
+          .diff-block .diff-header{padding:14px 20px!important}
+          .diff-block .diff-header span{font-size:18px!important}
+          .diff-block .diff-head{padding:10px 20px!important;font-size:14px!important}
+          .diff-block .diff-row{padding:10px 20px!important;font-size:16px!important}
+          .diff-block .diff-row span{font-size:16px!important}
+          .rw{padding:12px 20px!important;font-size:16px!important}
+          .rw span,.rw div{font-size:16px!important}
+          .app-main input,.app-main select{font-size:16px!important;padding:12px 14px!important}
+          .app-main button{font-size:15px!important}
+        }
       `}</style>
 
-      <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
+      <header className="app-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:30,height:30,borderRadius:7,background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#fff",fontFamily:"'IBM Plex Mono',monospace"}}>O</div>
-          <div><div style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
+          <div className="logo-icon" style={{width:30,height:30,borderRadius:7,background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#fff",fontFamily:"'IBM Plex Mono',monospace"}}>O</div>
+          <div><div className="logo-text" style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <span className="header-pills" style={{display:"flex",gap:6}}><Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/></span>
           <div className="hide-mobile" style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
-            <span style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.displayName}</span>
-            <span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#F0F0EE",color:"#777"}}>{user.role}</span>
+            <div className="user-avatar" style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
+            <span className="user-name" style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.displayName}</span>
+            <span className="user-role" style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#F0F0EE",color:"#777"}}>{user.role}</span>
             <button onClick={async()=>{const s=tab==="departs"?"departs":tab==="retours"?"retours":tab==="garage"?"garage":tab==="dispo"?"dispo":tab==="vacances"?"vacances":tab==="prospects"?"prospects":"vehicles";try{const res=await fetch(`/api/export/csv?section=${s}`,{headers});if(!res.ok){setToast({msg:"Erreur export",type:"err"});return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`opportix_${s}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);setToast({msg:"Export CSV téléchargé",type:"ok"});}catch{setToast({msg:"Erreur export",type:"err"});}}} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Export CSV</button>
             <button onClick={onLogout} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Déconnexion</button>
           </div>
@@ -411,21 +476,21 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         {TABS.map(t=><button key={t.k} className="tb" onClick={()=>go(t.k)} style={{padding:"6px 12px",borderRadius:6,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",background:tab===t.k?"#fff":"transparent",color:tab===t.k?"#1A1A1A":"#999",boxShadow:tab===t.k?"0 1px 2px rgba(0,0,0,0.05)":"none",transition:"all .15s"}}>{t.l}</button>)}
       </nav>
 
-      <main style={{padding:"14px 20px",maxWidth:1300,margin:"0 auto"}}>
+      <main className="app-main" style={{padding:"14px 20px",maxWidth:1300,margin:"0 auto"}}>
 
         {tab==="diffusion"&&(
           <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
+            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
               {[
                 {l:"TOTAL VOITURES",v:all.length,c:"#1A1A1A"},
                 {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",s:`${nUA} actifs · ${nUI} immo`},
                 {l:"GREEN",v:green.length,c:"#2FAA6B",s:`${nGA} actifs · ${nGI} immo`},
                 {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF"},
               ].map((k,i)=>(
-                <div key={i} style={{background:"#fff",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8}}>{k.l}</div>
-                  <div style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace"}}>{k.v}</div>
-                  {k.s&&<div style={{fontSize:9,color:"#BBB"}}>{k.s}</div>}
+                <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
+                  <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8}}>{k.l}</div>
+                  <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace"}}>{k.v}</div>
+                  {k.s&&<div className="stat-sub" style={{fontSize:9,color:"#BBB"}}>{k.s}</div>}
                 </div>
               ))}
             </div>
@@ -521,8 +586,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
             {showAdd==="fleet"&&<AddBox fields={[["Immat *","im","XX-000-XX"],["Marque","mq","HYUNDAI"],["Modele","mo","KONA"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"]]} form={form} setForm={setForm} onAdd={()=>{if(!form.im?.trim())return;add(fTab,{...form,im:form.im.toUpperCase().trim(),mq:(form.mq||"").toUpperCase().trim(),st:form.st||"ACTIF"});}} extra={<Sel l="Statut" v={form.st||"ACTIF"} set={(v:string)=>setForm({...form,st:v})} opts={["ACTIF","IMMO"]}/>}/>}
             <div style={{fontSize:11,color:"#AAA",marginBottom:6}}>{filt.length} VH</div>
-            <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-              <div style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 80px",padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+            <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+              <div className="diff-head" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 80px",padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
                 <span>IMMAT</span><span>CHAUFFEUR</span><span>MARQUE</span><span>MODELE</span><span>LEASER</span><span>STATUT</span><span style={{textAlign:"right"}}></span>
               </div>
               <div style={{maxHeight:480,overflowY:"auto"}}>
