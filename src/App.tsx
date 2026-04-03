@@ -274,13 +274,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,di:n});
     }else if(type==="garage"&&entry.im){
-      // Ajout au garage → IMMO dans la flotte + retirer de dispo (only in correct fleet)
+      // Ajout au garage → IMMO dans la flotte + retirer de dispo
       const im=entry.im.toUpperCase().trim();
       const garLabel=entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE";
-      const exists=[...urban,...green].find((v:any)=>v.im===im);
-      let nu=entry.soc==="GREEN"?[...urban]:urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v);
-      let ng=entry.soc==="GREEN"?green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...green];
-      if(!exists){
+      const inUrban=urban.find((v:any)=>v.im===im);
+      const inGreen=green.find((v:any)=>v.im===im);
+      // Update whichever fleet the car actually lives in
+      let nu=inUrban?urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...urban];
+      let ng=inGreen?green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...green];
+      // If car doesn't exist in any fleet, add it based on form soc
+      if(!inUrban&&!inGreen){
         const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
         const newVeh={im,mq:pm.mq,mo:pm.mo,le:(entry.le||"").toUpperCase().trim(),st:"IMMO",ch:garLabel};
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
