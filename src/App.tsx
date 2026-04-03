@@ -388,69 +388,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .nav-scroll::-webkit-scrollbar{display:none}
         }
         @media(min-width:1920px){
-          :root{font-size:17px}
-          .app-shell{font-size:17px!important}
-          .app-header{padding:16px 36px!important;gap:14px!important}
-          .app-header .logo-icon{width:42px!important;height:42px!important;font-size:20px!important;border-radius:10px!important}
-          .app-header .logo-text{font-size:18px!important}
-          .header-pills span{padding:4px 12px!important;font-size:13px!important}
-          .app-header button{font-size:13px!important;padding:6px 14px!important}
-          .app-header .user-avatar{width:34px!important;height:34px!important;font-size:14px!important}
-          .app-header .user-name{font-size:14px!important}
-          .app-header .user-role{font-size:11px!important;padding:2px 8px!important}
-          .nav-scroll{padding:10px 36px!important;gap:6px!important}
-          .nav-scroll .tb{padding:10px 20px!important;font-size:15px!important;border-radius:8px!important}
-          .app-main{max-width:1800px!important;padding:24px 36px!important}
-          .app-main .stat-card{padding:16px 18px!important;border-radius:10px!important}
-          .app-main .stat-card .stat-label{font-size:12px!important}
-          .app-main .stat-card .stat-value{font-size:32px!important}
-          .app-main .stat-card .stat-sub{font-size:12px!important}
-          .grid-mobile{gap:16px!important}
-          .diff-block{border-radius:10px!important}
-          .diff-block .diff-header{padding:10px 16px!important}
-          .diff-block .diff-header span{font-size:15px!important}
-          .diff-block .diff-header button{font-size:13px!important;padding:4px 12px!important}
-          .diff-block .diff-head{padding:8px 16px!important;font-size:12px!important}
-          .diff-block .diff-row{padding:8px 16px!important;font-size:14px!important}
-          .diff-block .diff-row span{font-size:14px!important}
-          .diff-block .diff-form{padding:12px 16px!important}
-          .diff-block .diff-form input,.diff-block .diff-form select{font-size:13px!important;padding:8px 10px!important}
-          .diff-block .diff-form button{font-size:13px!important;padding:8px 16px!important;height:auto!important}
-          .rw{padding:10px 16px!important;font-size:14px!important}
-          .rw span,.rw div{font-size:14px!important}
-          .app-main input,.app-main select{font-size:14px!important;padding:10px 12px!important}
-          .app-main button{font-size:13px!important}
-          .app-main table{font-size:14px!important}
-          .app-main th,.app-main td{padding:10px 12px!important;font-size:14px!important}
+          .app-shell{zoom:1.35!important}
+          .app-main{max-width:none!important}
         }
         @media(min-width:2560px){
-          :root{font-size:20px}
-          .app-shell{font-size:20px!important}
-          .app-header{padding:22px 48px!important}
-          .app-header .logo-icon{width:52px!important;height:52px!important;font-size:24px!important}
-          .app-header .logo-text{font-size:22px!important}
-          .header-pills span{padding:5px 14px!important;font-size:15px!important}
-          .app-header button{font-size:15px!important;padding:8px 18px!important}
-          .app-header .user-avatar{width:40px!important;height:40px!important;font-size:16px!important}
-          .app-header .user-name{font-size:16px!important}
-          .app-header .user-role{font-size:13px!important;padding:3px 10px!important}
-          .nav-scroll{padding:14px 48px!important;gap:8px!important}
-          .nav-scroll .tb{padding:14px 28px!important;font-size:18px!important;border-radius:10px!important}
-          .app-main{max-width:2200px!important;padding:32px 48px!important}
-          .app-main .stat-card{padding:22px 24px!important}
-          .app-main .stat-card .stat-label{font-size:14px!important}
-          .app-main .stat-card .stat-value{font-size:42px!important}
-          .app-main .stat-card .stat-sub{font-size:14px!important}
-          .grid-mobile{gap:20px!important}
-          .diff-block .diff-header{padding:14px 20px!important}
-          .diff-block .diff-header span{font-size:18px!important}
-          .diff-block .diff-head{padding:10px 20px!important;font-size:14px!important}
-          .diff-block .diff-row{padding:10px 20px!important;font-size:16px!important}
-          .diff-block .diff-row span{font-size:16px!important}
-          .rw{padding:12px 20px!important;font-size:16px!important}
-          .rw span,.rw div{font-size:16px!important}
-          .app-main input,.app-main select{font-size:16px!important;padding:12px 14px!important}
-          .app-main button{font-size:15px!important}
+          .app-shell{zoom:1.7!important}
         }
       `}</style>
 
