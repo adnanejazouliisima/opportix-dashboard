@@ -279,14 +279,28 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const garLabel=entry.gar?`GARAGE ${entry.gar.toUpperCase()}`:"GARAGE";
       const inUrban=urban.find((v:any)=>v.im===im);
       const inGreen=green.find((v:any)=>v.im===im);
-      // Update whichever fleet the car actually lives in
-      let nu=inUrban?urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...urban];
-      let ng=inGreen?green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:garLabel}:v):[...green];
-      // If car doesn't exist in any fleet, add it based on form soc
-      if(!inUrban&&!inGreen){
+      const isGreen=entry.soc==="GREEN";
+      const vehData={st:"IMMO" as string,ch:garLabel};
+      let nu=[...urban]; let ng=[...green];
+      if(inUrban&&!isGreen){
+        // Car is in urban where it belongs — just update status
+        nu=urban.map((v:any)=>v.im===im?{...v,...vehData}:v);
+      }else if(inGreen&&isGreen){
+        // Car is in green where it belongs — just update status
+        ng=green.map((v:any)=>v.im===im?{...v,...vehData}:v);
+      }else if(inUrban&&isGreen){
+        // Car is in urban but should be in green — move it
+        nu=urban.filter((v:any)=>v.im!==im);
+        ng=[...green,{...inUrban,...vehData}];
+      }else if(inGreen&&!isGreen){
+        // Car is in green but should be in urban — move it
+        ng=green.filter((v:any)=>v.im!==im);
+        nu=[...urban,{...inGreen,...vehData}];
+      }else{
+        // Car doesn't exist in any fleet — create it
         const pm=entry.mo?parseMo(entry.mo):{mq:"",mo:""};
-        const newVeh={im,mq:pm.mq,mo:pm.mo,le:(entry.le||"").toUpperCase().trim(),st:"IMMO",ch:garLabel};
-        if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
+        const newVeh={im,mq:pm.mq,mo:pm.mo,le:(entry.le||"").toUpperCase().trim(),...vehData};
+        if(isGreen){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
       const nd=disp.filter((d:any)=>d.im?.toUpperCase().trim()!==im);
       if(nd.length!==disp.length) setDisp(nd);
