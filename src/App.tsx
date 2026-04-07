@@ -306,6 +306,21 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       if(nd.length!==disp.length) setDisp(nd);
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,[k]:n,di:nd});
+    }else if(type==="vacs"&&entry.ch){
+      // Vacances → trouver la voiture du chauffeur et la mettre en dispo
+      const chName=entry.ch.toUpperCase().trim();
+      const veh=[...urban,...green].find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
+      if(veh){
+        const im=veh.im;
+        const isInDisp=disp.find((d:any)=>d.im===im);
+        if(!isInDisp){
+          const nd=[...disp,{im,soc:entry.soc||veh.soc||"",mo:veh.mo||"",ch:chName,no:`VACANCES ${entry.deb||""}-${entry.fin||""}`.trim(),id:uid()}];
+          const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
+          const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
+          setUrban(nu);setGreen(ng);setDisp(nd);
+          sv({u:nu,g:ng,[k]:n,di:nd});
+        }else{sv({[k]:n});}
+      }else{sv({[k]:n});}
     }else{
       sv({[k]:n});
     }
@@ -350,6 +365,22 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     }else if(type==="rets"&&item?.im){
       const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());
       setDisp(nd);sv({ret:n,di:nd});
+    }else if(type==="vacs"&&item?.ch){
+      // Suppression vacances → si la voiture est encore en dispo (pas louée), remettre le chauffeur dessus
+      const chName=item.ch.toUpperCase().trim();
+      const dispItem=disp.find((d:any)=>d.ch&&d.ch.toUpperCase().trim()===chName&&d.no&&d.no.includes("VACANCES"));
+      if(dispItem){
+        // Voiture encore en dispo = pas louée à quelqu'un d'autre, on restaure
+        const im=dispItem.im;
+        const nd=disp.filter((d:any)=>d.im!==im);
+        const nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:chName}:v);
+        const ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:chName}:v);
+        setUrban(nu);setGreen(ng);setDisp(nd);
+        sv({u:nu,g:ng,[k]:n,di:nd});
+      }else{
+        // Voiture déjà louée à un autre conducteur, on touche pas à la flotte
+        sv({[k]:n});
+      }
     }else if(type==="garage"&&item?.im){
       // Sortie du garage → ajouter en dispo + garder IMMO dans la flotte
       const im=item.im.toUpperCase().trim();
