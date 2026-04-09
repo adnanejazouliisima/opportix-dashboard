@@ -337,13 +337,29 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
     if(type==="deps") set(sortDeps(n)); else set(n);
-    // Sync modele/chauffeur to fleet when editing a departure
+    // Sync modele/chauffeur/societe to fleet when editing a departure
     if(type==="deps"&&updated.im){
       const im=(updated.im||"").toUpperCase().trim();
       const pm=updated.mo?parseMo(updated.mo):{mq:"",mo:""};
       const le=(updated.le||"").toUpperCase().trim();
-      const nu=urban.map((v:any)=>v.im===im?{...v,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",le:le||v.le||"",ch:updated.ch||v.ch}:v);
-      const ng=green.map((v:any)=>v.im===im?{...v,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",le:le||v.le||"",ch:updated.ch||v.ch}:v);
+      const isGreen=updated.soc==="GREEN";
+      const inUrban=urban.find((v:any)=>v.im===im);
+      const inGreen=green.find((v:any)=>v.im===im);
+      const upd=(v:any)=>({...v,mo:pm.mo||v.mo||"",mq:pm.mq||v.mq||"",le:le||v.le||"",ch:updated.ch||v.ch});
+      let nu=[...urban]; let ng=[...green];
+      if(inUrban&&!isGreen){
+        nu=urban.map((v:any)=>v.im===im?upd(v):v);
+      }else if(inGreen&&isGreen){
+        ng=green.map((v:any)=>v.im===im?upd(v):v);
+      }else if(inUrban&&isGreen){
+        // Car is in urban but societe changed to green — move it
+        nu=urban.filter((v:any)=>v.im!==im);
+        ng=[...green,upd(inUrban)];
+      }else if(inGreen&&!isGreen){
+        // Car is in green but societe changed to urban — move it
+        ng=green.filter((v:any)=>v.im!==im);
+        nu=[...urban,upd(inGreen)];
+      }
       setUrban(nu);setGreen(ng);
       sv({[k]:n,u:nu,g:ng});
     } else { sv({[k]:n}); }
