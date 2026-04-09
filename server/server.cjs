@@ -67,7 +67,6 @@ async function connectDB() {
   await client.connect();
   db = client.db();
   console.log('  ✅ MongoDB connecte');
-
   // Create indexes for performance
   await db.collection('users').createIndex({ username: 1 }, { unique: true });
   await db.collection('users').createIndex({ id: 1 });
