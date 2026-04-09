@@ -247,8 +247,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const newVeh={im,mq:pm.mq,mo:pm.mo,le,st:"ACTIF",ch:entry.ch||""};
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
+      // Auto-supprimer la vacation du chauffeur s'il en a une
+      const chDep=(entry.ch||"").toUpperCase().trim();
+      const vacItem=chDep?vacs.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chDep):null;
+      const nv=vacItem?vacs.filter((v:any)=>v!==vacItem):vacs;
+      if(vacItem){if(vacItem)fetch('/api/archive',{method:'POST',headers,body:JSON.stringify({section:'vacs',item:vacItem})}).catch(()=>{});setVacs(nv);}
       setUrban(nu);setGreen(ng);setDisp(nd);
-      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa});
+      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa,va:nv});
     }else if(type==="rets"&&entry.im){
       if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
         const im=entry.im.toUpperCase().trim();
