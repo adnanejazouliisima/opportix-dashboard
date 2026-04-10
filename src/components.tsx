@@ -16,7 +16,7 @@ export function StBadge({s}:{s:string}){return <span style={{padding:"1px 6px",b
 export function SocBadge({s}:{s:string}){return <span style={{padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:600,background:s==="URBAN NEO"?"#E0EDFA":"#E0F5EA",color:s==="URBAN NEO"?"#2874A6":"#1E8A52"}}>{s==="URBAN NEO"?"URBAN":"GREEN"}</span>;}
 
 /* ═══ DIFFBLOCK ═══ */
-export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,onEdit,onConfirm,useIdx,user}:any){
+export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,onEdit,onConfirm,onExit,useIdx,user}:any){
   const [open,setOpen]=useState(false);
   const initForm=()=>{const o:any={};formFields.forEach(([k,,, opts]:any)=>{if(opts)o[k]=opts[0];});return o;};
   const [f,setF]=useState<any>(initForm);
@@ -26,7 +26,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
   const doAdd=()=>{onAdd(f);setF(initForm);setOpen(false);};
   const startEdit=(d:any)=>{const o:any={};formFields.forEach(([k]:any)=>{o[k]=d[k]||"";});setEditF(o);setEditId(d.id);};
   const saveEdit=()=>{if(onEdit)onEdit(editId,editF);setEditId(null);setEditF({});};
-  const actCol=onConfirm?"82px":(onEdit?"60px":"30px");
+  const actCol=onExit?"95px":(onConfirm?"82px":(onEdit?"60px":"30px"));
   return(
     <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
       <div className="diff-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
@@ -67,7 +67,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
             <span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
               {delId===(useIdx?i:d.id)
                 ?<button onClick={()=>{onDel(useIdx?i:d.id);setDelId(null);}} style={{padding:"1px 5px",borderRadius:3,border:"none",background:"#C0392B",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
-                :<>{onConfirm&&user.role!=='lecteur'&&<button title="Confirmer en départ réel" onClick={()=>onConfirm(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #1E8A52",background:"#E8F8F0",color:"#1E8A52",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>&#10003;</button>}{onEdit&&user.role!=='lecteur'&&<button onClick={()=>startEdit(d)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>&#9998;</button>}<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
+                :<>{onExit&&user.role!=='lecteur'&&<button title="Sortir du garage → mettre en dispo" onClick={()=>onExit(useIdx?i:d.id)} style={{padding:"1px 6px",borderRadius:3,border:"1px solid #E8633A",background:"#FFF1EB",color:"#E8633A",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Sortir</button>}{onConfirm&&user.role!=='lecteur'&&<button title="Confirmer en départ réel" onClick={()=>onConfirm(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #1E8A52",background:"#E8F8F0",color:"#1E8A52",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>&#10003;</button>}{onEdit&&user.role!=='lecteur'&&<button onClick={()=>startEdit(d)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>&#9998;</button>}<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
               }
             </span></>}
           </div>
@@ -89,7 +89,7 @@ export function AddBox({fields,form,setForm,onAdd,extra}:any){
 }
 
 /* ═══ CRUDP ═══ */
-export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setForm,addItem,delItem,editItem,cols,heads,rr,useIdx,user}:any){
+export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setForm,addItem,delItem,editItem,exitItem,cols,heads,rr,useIdx,user}:any){
   const open=showAdd===type;
   const [formErr,setFormErr]=useState("");
   const [delConfirm,setDelConfirm]=useState<any>(null);
@@ -122,7 +122,7 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
             :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p||l} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}/>
           }</span>)}<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}><button onClick={saveEdit} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>X</button></span></>
           :<>{rr(d)}
-          {user.role!=='lecteur'&&<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>{delConfirm===(useIdx?i:d.id)?<span style={{display:"inline-flex",gap:2}}><button onClick={()=>{delItem(type,useIdx?i:d.id,useIdx);setDelConfirm(null);}} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelConfirm(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></span>:<>{editItem&&<button className="dl" onClick={()=>startEdit(d)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button>}<button className="dl" onClick={()=>setDelConfirm(useIdx?i:d.id)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></>}</span>}</>}
+          {user.role!=='lecteur'&&<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>{delConfirm===(useIdx?i:d.id)?<span style={{display:"inline-flex",gap:2}}><button onClick={()=>{delItem(type,useIdx?i:d.id,useIdx);setDelConfirm(null);}} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelConfirm(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></span>:<>{exitItem&&<button title="Sortir du garage → mettre en dispo" onClick={()=>exitItem(type,useIdx?i:d.id,useIdx)} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E8633A",background:"#FFF1EB",color:"#E8633A",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Sortir</button>}{editItem&&<button className="dl" onClick={()=>startEdit(d)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button>}<button className="dl" onClick={()=>setDelConfirm(useIdx?i:d.id)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></>}</span>}</>}
         </div>)}
         {data.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun element</div>}
       </div>

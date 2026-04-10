@@ -159,7 +159,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           }
         });
         setUrban(u);setGreen(g);
-        if(data.ga) setGarage(data.ga);
+        if(data.ga) setGarage(data.ga.map((it:any)=>{
+          // Patch id manquant + deviner la societe à partir de la flotte si absente
+          let patched=it.id?it:{...it,id:uid()};
+          if(!patched.soc&&patched.im){
+            const im=patched.im.toUpperCase().trim();
+            if(u.find((v:any)=>v.im===im)) patched={...patched,soc:"URBAN NEO"};
+            else if(g.find((v:any)=>v.im===im)) patched={...patched,soc:"GREEN"};
+          }
+          return patched;
+        }));
         if(data.dep) setDeps([...depList].sort((a:any,b:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(b.dt)-p(a.dt);}));
         if(data.ret) setRets(data.ret);
         if(data.di) setDisp(data.di);
@@ -527,26 +536,25 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
         {tab==="diffusion"&&(
           <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8}}>
+            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
               {[
                 {l:"TOTAL VOITURES",v:all.length,c:"#1A1A1A"},
                 {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",a:nUA,im:nUI},
                 {l:"GREEN",v:green.length,c:"#2FAA6B",a:nGA,im:nGI},
                 {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF"},
               ].map((k:any,i:number)=>(
-                <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
-                  <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8}}>{k.l}</div>
+                <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
+                  <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,marginBottom:4}}>{k.l}</div>
                   {k.a!==undefined?(
-                    <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginTop:2}}>
-                      <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace"}}>
-                        <span style={{color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</span>
-                        <span style={{color:"#DDD"}}>·</span>
-                        <span style={{color:"#C0392B"}}>{k.im} IMMO</span>
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <div className="stat-value" style={{fontSize:32,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:2,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1.1}}>
+                        <div style={{fontSize:15,fontWeight:800,color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</div>
+                        <div style={{fontSize:15,fontWeight:800,color:"#C0392B"}}>{k.im} IMMO</div>
                       </div>
                     </div>
                   ):(
-                    <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace"}}>{k.v}</div>
+                    <div className="stat-value" style={{fontSize:32,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
                   )}
                 </div>
               ))}
@@ -581,14 +589,23 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("disp",id)}
                 user={user}
               />
-              <DiffBlock title="GARAGE" titleBg="#FDF4E3" color="#D4A027" count={`${garage.filter((g:any)=>g.soc==="URBAN NEO").length} Urb · ${garage.filter((g:any)=>g.soc==="GREEN").length} Grn`}
-                heads={["SOCIETE","IMMAT","GARAGE","ENTREE","SORTIE"]} cols="65px 90px 1fr 60px 60px" data={garage} maxH={160}
-                renderRow={(g:any)=><><SocBadge s={g.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
-                onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,im:f.im.toUpperCase().trim()});}}
-                onDel={(id:any)=>del("garage",id,true)}
+              <DiffBlock title="GARAGE URBAN" titleBg="#FDF4E3" color="#D4A027" count={`${garage.filter((g:any)=>g.soc==="URBAN NEO").length} VH`}
+                heads={["IMMAT","GARAGE","ENTREE","SORTIE"]} cols="90px 1fr 60px 60px" data={garage.filter((g:any)=>g.soc==="URBAN NEO")} maxH={160}
+                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
+                formFields={[["im","Immat *","XX-000-XX"],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
+                onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"URBAN NEO",im:f.im.toUpperCase().trim()});}}
+                onDel={(id:any)=>del("garage",id)}
+                onExit={(id:any)=>del("garage",id)}
                 user={user}
-                useIdx
+              />
+              <DiffBlock title="GARAGE GREEN" titleBg="#FDF4E3" color="#D4A027" count={`${garage.filter((g:any)=>g.soc==="GREEN").length} VH`}
+                heads={["IMMAT","GARAGE","ENTREE","SORTIE"]} cols="90px 1fr 60px 60px" data={garage.filter((g:any)=>g.soc==="GREEN")} maxH={160}
+                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
+                formFields={[["im","Immat *","XX-000-XX"],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
+                onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"GREEN",im:f.im.toUpperCase().trim()});}}
+                onDel={(id:any)=>del("garage",id)}
+                onExit={(id:any)=>del("garage",id)}
+                user={user}
               />
               <DiffBlock title="VACANCES CHAUFFEURS" titleBg="#EDE8FA" color="#7B61FF" count={vacs.length}
                 heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN"]} cols="1fr 65px 70px 70px" data={vacs} maxH={160}
@@ -677,10 +694,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           cols="80px 100px 1fr 1fr 60px" heads={["SOCIETE","IMMAT","MODELE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
-        {tab==="garage"&&<CrudP title="Garage" color="#D4A027" data={garage} type="garage" showAdd={showAdd} setShowAdd={setShowAdd} useIdx
+        {tab==="garage"&&<CrudP title="Garage" color="#D4A027" data={garage} type="garage" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Garage","gar","Nom"],["Entree","de","JJ/MM"],["Sortie","ds","JJ/MM"],["Jours","ji","0"]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
-          cols="80px 100px 1fr 70px 70px 50px 60px" heads={["SOCIETE","IMMAT","GARAGE","ENTREE","SORTIE","JOURS",""]}
+          form={form} setForm={setForm} addItem={add} delItem={del} exitItem={(t:string,id:any)=>del(t,id)} user={user}
+          cols="80px 100px 1fr 70px 70px 50px 110px" heads={["SOCIETE","IMMAT","GARAGE","ENTREE","SORTIE","JOURS",""]}
           rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
         />}
         {tab==="historique"&&(
