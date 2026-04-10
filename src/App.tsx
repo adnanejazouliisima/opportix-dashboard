@@ -91,6 +91,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [disp,setDisp]=useState<any[]>([]);
   const [vacs,setVacs]=useState<any[]>([]);
   const [pros,setPros]=useState<any[]>([]);
+  const [dpvs,setDpvs]=useState<any[]>([]);
+  const [rpvs,setRpvs]=useState<any[]>([]);
   const [msgs,setMsgs]=useState<any[]>([]);
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
@@ -163,6 +165,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(data.di) setDisp(data.di);
         if(data.va) setVacs(data.va);
         if(data.pr) setPros(data.pr);
+        if(data.dpv) setDpvs(data.dpv);
+        if(data.rpv) setRpvs(data.rpv);
         if(data.msgs) setMsgs(data.msgs);
         // Save synced fleet if vehicles were added
         if(changed){
@@ -195,7 +199,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const d={
       u:o.u??urban,g:o.g??green,ga:o.ga??garage,
       dep:o.dep??deps,ret:o.ret??rets,
-      di:o.di??disp,va:o.va??vacs,pr:o.pr??pros,msgs:o.msgs??msgs
+      di:o.di??disp,va:o.va??vacs,pr:o.pr??pros,
+      dpv:o.dpv??dpvs,rpv:o.rpv??rpvs,
+      msgs:o.msgs??msgs
     };
     savingRef.current=true;setSaving(true);
     try{
@@ -219,8 +225,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     return true;
   }),[cur,search,fTab]);
 
-  const add=(type:string,entry:any)=>{
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
+  const add=(type:string,entry:any,extra:any={})=>{
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
     const[arr,set,k]=m[type];
     const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=[...arr,(type==="urban"||type==="green")?{...entry}:{...entry,id:uid()}];
@@ -253,7 +259,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const nv=vacItem?vacs.filter((v:any)=>v!==vacItem):vacs;
       if(vacItem){if(vacItem)fetch('/api/archive',{method:'POST',headers,body:JSON.stringify({section:'vacs',item:vacItem})}).catch(()=>{});setVacs(nv);}
       setUrban(nu);setGreen(ng);setDisp(nd);
-      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa,va:nv});
+      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa,va:nv,...extra});
     }else if(type==="rets"&&entry.im){
       if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
         const im=entry.im.toUpperCase().trim();
@@ -263,8 +269,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
         const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"BUREAU"}:v);
         setUrban(nu);setGreen(ng);setDisp(nd);
-        sv({u:nu,g:ng,ret:n,di:nd});
-      }else{sv({ret:n});}
+        sv({u:nu,g:ng,ret:n,di:nd,...extra});
+      }else{sv({ret:n,...extra});}
     }else if(type==="disp"&&entry.im){
       // Ajout manuel en dispo → chauffeur BUREAU + IMMO dans la flotte
       const im=entry.im.toUpperCase().trim();
@@ -277,7 +283,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
       }
       setUrban(nu);setGreen(ng);
-      sv({u:nu,g:ng,di:n});
+      sv({u:nu,g:ng,di:n,...extra});
     }else if(type==="garage"&&entry.im){
       // Ajout au garage → IMMO dans la flotte + retirer de dispo
       const im=entry.im.toUpperCase().trim();
@@ -310,7 +316,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const nd=disp.filter((d:any)=>d.im?.toUpperCase().trim()!==im);
       if(nd.length!==disp.length) setDisp(nd);
       setUrban(nu);setGreen(ng);
-      sv({u:nu,g:ng,[k]:n,di:nd});
+      sv({u:nu,g:ng,[k]:n,di:nd,...extra});
     }else if(type==="vacs"&&entry.ch){
       // Vacances → trouver la voiture du chauffeur et la mettre en dispo
       const chName=entry.ch.toUpperCase().trim();
@@ -323,16 +329,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
           const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
           setUrban(nu);setGreen(ng);setDisp(nd);
-          sv({u:nu,g:ng,[k]:n,di:nd});
-        }else{sv({[k]:n});}
-      }else{sv({[k]:n});}
+          sv({u:nu,g:ng,[k]:n,di:nd,...extra});
+        }else{sv({[k]:n,...extra});}
+      }else{sv({[k]:n,...extra});}
     }else{
-      sv({[k]:n});
+      sv({[k]:n,...extra});
     }
     setShowAdd(null);setForm({});
   };
   const edit=(type:string,id:any,updated:any)=>{
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
     const[arr,set,k]=m[type];
     const sortDeps=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
@@ -365,7 +371,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     } else { sv({[k]:n}); }
   };
   const del=(type:string,id:any,isIdx?:boolean)=>{
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"]};
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
     const[arr,set,k]=m[type];
     const item=isIdx?arr[id]:arr.find((d:any)=>d.id===id);
     // Archive before deleting
@@ -415,6 +421,23 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     }
     setDelC(null);
   };
+  // Confirme un "depart à prévoir" / "retour à prévoir" : le déplace dans deps/rets via add() puis le retire de dpvs/rpvs
+  const confirmPrevu=(type:"dpvs"|"rpvs",id:any)=>{
+    const arr=type==="dpvs"?dpvs:rpvs;
+    const setArr=type==="dpvs"?setDpvs:setRpvs;
+    const k=type==="dpvs"?"dpv":"rpv";
+    const item=arr.find((d:any)=>d.id===id);
+    if(!item){return;}
+    if(!item.im?.trim()){setToast({msg:"Immatriculation obligatoire pour confirmer",type:"err"});return;}
+    // Concatene la note et le commentaire (le champ "co" n'existe pas dans deps/rets)
+    const noteCombined=[item.no,item.co].filter(Boolean).join(" | ");
+    const target={soc:item.soc||"URBAN NEO",im:item.im.toUpperCase().trim(),mo:item.mo||"",le:item.le||"",ch:item.ch||"",dt:item.dt||"",no:noteCombined};
+    // Retire d'abord de la liste à prévoir, puis délègue à add() en propageant l'override dpv/rpv
+    const newArr=arr.filter((d:any)=>d.id!==id);
+    setArr(newArr);
+    add(type==="dpvs"?"deps":"rets",target,{[k]:newArr});
+  };
+
   const tog=(im:string)=>{
     const up=(l:any[])=>l.map(v=>v.im===im?{...v,st:v.st==="ACTIF"?"IMMO":"ACTIF"}:v);
     if(fTab==="urban"){const n=up(urban);setUrban(n);sv({u:n});}
@@ -430,7 +453,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     setNewMsg("");
   };
 
-  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"prospects",l:"Prospects"},{k:"messagerie",l:"Messagerie"}];
+  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"messagerie",l:"Messagerie"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
 
@@ -490,7 +513,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             <div className="user-avatar" style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
             <span className="user-name" style={{fontSize:11,fontWeight:600,color:"#444"}}>{user.displayName}</span>
             <span className="user-role" style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#F0F0EE",color:"#777"}}>{user.role}</span>
-            <button onClick={async()=>{const s=tab==="departs"?"departs":tab==="retours"?"retours":tab==="garage"?"garage":tab==="dispo"?"dispo":tab==="vacances"?"vacances":tab==="prospects"?"prospects":"vehicles";try{const res=await fetch(`/api/export/csv?section=${s}`,{headers});if(!res.ok){setToast({msg:"Erreur export",type:"err"});return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`opportix_${s}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);setToast({msg:"Export CSV téléchargé",type:"ok"});}catch{setToast({msg:"Erreur export",type:"err"});}}} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Export CSV</button>
+            <button onClick={async()=>{const s=tab==="departs"?"departs":tab==="retours"?"retours":tab==="garage"?"garage":tab==="dispo"?"dispo":tab==="vacances"?"vacances":"vehicles";try{const res=await fetch(`/api/export/csv?section=${s}`,{headers});if(!res.ok){setToast({msg:"Erreur export",type:"err"});return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`opportix_${s}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);setToast({msg:"Export CSV téléchargé",type:"ok"});}catch{setToast({msg:"Erreur export",type:"err"});}}} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Export CSV</button>
             <button onClick={onLogout} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Déconnexion</button>
           </div>
         </div>
@@ -504,37 +527,50 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
         {tab==="diffusion"&&(
           <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
+            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8}}>
               {[
                 {l:"TOTAL VOITURES",v:all.length,c:"#1A1A1A"},
-                {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",s:`${nUA} actifs · ${nUI} immo`},
-                {l:"GREEN",v:green.length,c:"#2FAA6B",s:`${nGA} actifs · ${nGI} immo`},
+                {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",a:nUA,im:nUI},
+                {l:"GREEN",v:green.length,c:"#2FAA6B",a:nGA,im:nGI},
                 {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF"},
-              ].map((k,i)=>(
+              ].map((k:any,i:number)=>(
                 <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
                   <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8}}>{k.l}</div>
-                  <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace"}}>{k.v}</div>
-                  {k.s&&<div className="stat-sub" style={{fontSize:9,color:"#BBB"}}>{k.s}</div>}
+                  {k.a!==undefined?(
+                    <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginTop:2}}>
+                      <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace"}}>
+                        <span style={{color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</span>
+                        <span style={{color:"#DDD"}}>·</span>
+                        <span style={{color:"#C0392B"}}>{k.im} IMMO</span>
+                      </div>
+                    </div>
+                  ):(
+                    <div className="stat-value" style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace"}}>{k.v}</div>
+                  )}
                 </div>
               ))}
             </div>
 
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <DiffBlock title="DEPARTS" titleBg="#FDECEA" color="#D94F3B" count={deps.length}
-                heads={["SOC","IMMAT","MODELE","LEASER","CHAUFFEUR","DATE"]} cols="55px 80px 60px 50px 1fr 50px" data={deps} maxH={160}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#666",fontSize:10}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.le||"—"}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","BYD SEAL"],["le","Leaser","ELPIS"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"]]}
-                onAdd={(f:any)=>{if(!f.im?.trim())return;add("deps",{...f,im:f.im.toUpperCase().trim()});}}
-                onDel={(id:any)=>del("deps",id)}
-                onEdit={(id:any,updated:any)=>edit("deps",id,updated)}
+              <DiffBlock title="DEPARTS À PRÉVOIR" titleBg="#FDECEA" color="#D94F3B" count={dpvs.length}
+                heads={["SOC","IMMAT","MODELE","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 60px 1fr 50px 1fr" data={dpvs} maxH={180}
+                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im||"—"}</span><span style={{color:"#666",fontSize:10}}>{d.mo||"—"}</span><span style={{color:"#444"}}>{d.ch||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.co||d.no||"—"}</span></>}
+                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat","XX-000-XX"],["mo","Modele","BYD SEAL"],["le","Leaser","ELPIS"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"],["no","Note","..."],["co","Commentaire","..."]]}
+                onAdd={(f:any)=>{add("dpvs",{...f,im:(f.im||"").toUpperCase().trim()});}}
+                onDel={(id:any)=>del("dpvs",id)}
+                onEdit={(id:any,updated:any)=>edit("dpvs",id,updated)}
+                onConfirm={(id:any)=>confirmPrevu("dpvs",id)}
                 user={user}
               />
-              <DiffBlock title="RETOURS" titleBg="#D4F0E0" color="#2FAA6B" count={rets.length}
-                heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE"]} cols="65px 90px 1fr 70px" data={rets} maxH={160}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"]]}
-                onAdd={(f:any)=>{if(!f.im?.trim())return;add("rets",{...f,im:f.im.toUpperCase().trim()});}}
-                onDel={(id:any)=>del("rets",id)}
+              <DiffBlock title="RETOURS À PRÉVOIR" titleBg="#D4F0E0" color="#2FAA6B" count={rpvs.length}
+                heads={["SOC","IMMAT","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 1fr 50px 1fr" data={rpvs} maxH={180}
+                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im||"—"}</span><span style={{color:"#444"}}>{d.ch||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.co||d.no||"—"}</span></>}
+                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat","XX-000-XX"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"],["no","Note","..."],["co","Commentaire","..."]]}
+                onAdd={(f:any)=>{add("rpvs",{...f,im:(f.im||"").toUpperCase().trim()});}}
+                onDel={(id:any)=>del("rpvs",id)}
+                onEdit={(id:any,updated:any)=>edit("rpvs",id,updated)}
+                onConfirm={(id:any)=>confirmPrevu("rpvs",id)}
                 user={user}
               />
               <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${disp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${disp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
@@ -560,14 +596,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
-                user={user}
-              />
-              <DiffBlock title="PROSPECTS" titleBg="#D4F0E0" color="#2FAA6B" count={pros.length}
-                heads={["NOM","CONTACT","BESOIN","STATUT"]} cols="1fr 1fr 1fr 70px" data={pros} maxH={160}
-                renderRow={(p:any)=><><span style={{fontWeight:600,color:"#333"}}>{p.nom}</span><span style={{color:"#666"}}>{p.ct||"—"}</span><span style={{color:"#666"}}>{p.bs||"—"}</span><span style={{padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:700,background:p.stu==="SIGNE"?"#E8F8F0":p.stu==="PERDU"?"#FDECEC":"#FDF4E3",color:p.stu==="SIGNE"?"#1E8A52":p.stu==="PERDU"?"#C0392B":"#B7791F"}}>{p.stu}</span></>}
-                formFields={[["nom","Nom *","Entreprise"],["ct","Contact","Tel/Email"],["bs","Besoin","Type"],["stu","Statut",null,["EN COURS","SIGNE","PERDU"]]]}
-                onAdd={(f:any)=>{if(!f.nom?.trim())return;add("pros",f);}}
-                onDel={(id:any)=>del("pros",id)}
                 user={user}
               />
             </div>
@@ -693,13 +721,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           cols="1fr 80px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN","NOTE",""]}
           rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
-        {tab==="prospects"&&<CrudP title="Prospects" color="#2FAA6B" data={pros} type="pros" showAdd={showAdd} setShowAdd={setShowAdd}
-          fields={[["Nom *","nom","Entreprise"],["Contact","ct","Tel/Email"],["Besoin","bs","Type"],["Statut","stu",null,["EN COURS","SIGNE","PERDU"]],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
-          cols="1fr 1fr 1fr 75px 1fr 60px" heads={["NOM","CONTACT","BESOIN","STATUT","NOTE",""]}
-          rr={(p:any)=><><span style={{fontWeight:600,color:"#333"}}>{p.nom}</span><span style={{color:"#666"}}>{p.ct||"—"}</span><span style={{color:"#666"}}>{p.bs||"—"}</span><span style={{padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:700,background:p.stu==="SIGNE"?"#E8F8F0":p.stu==="PERDU"?"#FDECEC":"#FDF4E3",color:p.stu==="SIGNE"?"#1E8A52":p.stu==="PERDU"?"#C0392B":"#B7791F"}}>{p.stu}</span><span style={{color:"#999",fontSize:11}}>{p.no||"—"}</span></>}
-        />}
-
         {tab==="messagerie"&&(
           <div className="ani">
             <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A",marginBottom:10}}>Messagerie inter-poles</div>

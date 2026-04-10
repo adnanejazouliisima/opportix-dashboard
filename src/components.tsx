@@ -16,7 +16,7 @@ export function StBadge({s}:{s:string}){return <span style={{padding:"1px 6px",b
 export function SocBadge({s}:{s:string}){return <span style={{padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:600,background:s==="URBAN NEO"?"#E0EDFA":"#E0F5EA",color:s==="URBAN NEO"?"#2874A6":"#1E8A52"}}>{s==="URBAN NEO"?"URBAN":"GREEN"}</span>;}
 
 /* ═══ DIFFBLOCK ═══ */
-export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,onEdit,useIdx,user}:any){
+export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,renderRow,formFields,onAdd,onDel,onEdit,onConfirm,useIdx,user}:any){
   const [open,setOpen]=useState(false);
   const initForm=()=>{const o:any={};formFields.forEach(([k,,, opts]:any)=>{if(opts)o[k]=opts[0];});return o;};
   const [f,setF]=useState<any>(initForm);
@@ -26,7 +26,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
   const doAdd=()=>{onAdd(f);setF(initForm);setOpen(false);};
   const startEdit=(d:any)=>{const o:any={};formFields.forEach(([k]:any)=>{o[k]=d[k]||"";});setEditF(o);setEditId(d.id);};
   const saveEdit=()=>{if(onEdit)onEdit(editId,editF);setEditId(null);setEditF({});};
-  const actCol=onEdit?"60px":"30px";
+  const actCol=onConfirm?"82px":(onEdit?"60px":"30px");
   return(
     <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
       <div className="diff-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
@@ -67,7 +67,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
             <span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
               {delId===(useIdx?i:d.id)
                 ?<button onClick={()=>{onDel(useIdx?i:d.id);setDelId(null);}} style={{padding:"1px 5px",borderRadius:3,border:"none",background:"#C0392B",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
-                :<>{onEdit&&user.role!=='lecteur'&&<button onClick={()=>startEdit(d)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>&#9998;</button>}<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
+                :<>{onConfirm&&user.role!=='lecteur'&&<button title="Confirmer en départ réel" onClick={()=>onConfirm(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #1E8A52",background:"#E8F8F0",color:"#1E8A52",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>&#10003;</button>}{onEdit&&user.role!=='lecteur'&&<button onClick={()=>startEdit(d)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>&#9998;</button>}<button onClick={()=>setDelId(useIdx?i:d.id)} style={{padding:"1px 5px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
               }
             </span></>}
           </div>

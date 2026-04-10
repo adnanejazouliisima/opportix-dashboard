@@ -185,14 +185,14 @@ app.get('/api/me', auth, (req, res) => {
 /* ═══ DATA ROUTES ═══ */
 app.get('/api/data', auth, async (req, res) => {
   const doc = await db.collection('data').findOne({ _key: 'fleet' });
-  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], msgs: [] });
+  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], dpv: [], rpv: [], msgs: [] });
   const { _id, _key, ...data } = doc;
   res.json(data);
 });
 
 app.put('/api/data', auth, canEdit, async (req, res) => {
   const d = req.body;
-  const validKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'msgs'];
+  const validKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs'];
   if (!d || typeof d !== 'object' || Array.isArray(d)) {
     return res.status(400).json({ error: 'Corps de requete invalide' });
   }
