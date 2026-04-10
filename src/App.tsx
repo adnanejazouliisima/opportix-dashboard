@@ -402,19 +402,21 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const nd=disp.filter((d:any)=>d.im!==item.im.toUpperCase().trim());
       setDisp(nd);sv({ret:n,di:nd});
     }else if(type==="vacs"&&item?.ch){
-      // Suppression vacances → si la voiture est encore en dispo (pas louée), remettre le chauffeur dessus
+      // Suppression vacances → on libère le chauffeur. La voiture reste dans le pool dispo,
+      // disponible pour être réassignée à n'importe qui via un nouveau départ.
+      // Le lien chauffeur ↔ voiture est porté par les départs, pas par cette ancienne attribution.
       const chName=item.ch.toUpperCase().trim();
       const dispItem=disp.find((d:any)=>d.ch&&d.ch.toUpperCase().trim()===chName&&d.no&&d.no.includes("VACANCES"));
       if(dispItem){
-        // Voiture encore en dispo = pas louée à quelqu'un d'autre, on restaure
+        // Nettoyer la marque "VACANCES" sur la voiture en dispo + repasser sa fiche flotte à BUREAU
         const im=dispItem.im;
-        const nd=disp.filter((d:any)=>d.im!==im);
-        const nu=urban.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:chName}:v);
-        const ng=green.map((v:any)=>v.im===im?{...v,st:"ACTIF",ch:chName}:v);
+        const nd=disp.map((d:any)=>d.im===im?{...d,ch:"",no:""}:d);
+        const nu=urban.map((v:any)=>v.im===im?{...v,ch:"BUREAU"}:v);
+        const ng=green.map((v:any)=>v.im===im?{...v,ch:"BUREAU"}:v);
         setUrban(nu);setGreen(ng);setDisp(nd);
         sv({u:nu,g:ng,[k]:n,di:nd});
       }else{
-        // Voiture déjà louée à un autre conducteur, on touche pas à la flotte
+        // La voiture a déjà été réassignée ailleurs, on ne touche à rien
         sv({[k]:n});
       }
     }else if(type==="garage"&&item?.im){

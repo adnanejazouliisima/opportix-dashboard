@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>OPPORTIX — Logique métier</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; color: #1A1A1A; font-size: 11.5pt; line-height: 1.5; }
+  .page { padding: 0; }
+  .cover { text-align: center; padding: 30mm 0 20mm 0; page-break-after: always; }
+  .cover .logo { display: inline-block; width: 70px; height: 70px; border-radius: 14px; background: #1A1A1A; color: #fff; font-weight: 800; font-size: 36px; line-height: 70px; font-family: 'Consolas', monospace; }
+  .cover h1 { font-size: 32pt; margin: 18px 0 4px 0; letter-spacing: 4px; }
+  .cover .subtitle { color: #666; font-size: 13pt; margin-bottom: 40px; }
+  .cover .meta { color: #888; font-size: 10pt; margin-top: 80px; }
+  h1 { font-size: 20pt; color: #1A1A1A; border-bottom: 3px solid #E8633A; padding-bottom: 6px; margin-top: 22px; page-break-after: avoid; }
+  h2 { font-size: 14pt; color: #1A1A1A; margin-top: 18px; padding-left: 10px; border-left: 4px solid #3A9BD5; page-break-after: avoid; }
+  h3 { font-size: 12pt; color: #444; margin-top: 14px; page-break-after: avoid; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code { font-family: 'Consolas', 'Courier New', monospace; background: #F3F3F1; padding: 1px 5px; border-radius: 3px; font-size: 10pt; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 9pt; font-weight: 700; font-family: 'Consolas', monospace; }
+  .tag-actif { background: #E8F8F0; color: #1E8A52; }
+  .tag-immo  { background: #FDECEC; color: #C0392B; }
+  .tag-urban { background: #E0EDFA; color: #2874A6; }
+  .tag-green { background: #E0F5EA; color: #1E8A52; }
+  .tag-garage{ background: #FDF4E3; color: #B7791F; }
+  .tag-vac   { background: #EDE8FA; color: #7B61FF; }
+  .toc { background: #FAFAF8; border: 1px solid #E5E5E3; border-radius: 8px; padding: 14px 22px; margin: 14px 0; }
+  .toc h2 { margin-top: 0; border: none; padding-left: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: #1A1A1A; text-decoration: none; }
+  .note { background: #FFF8F0; border-left: 4px solid #E8633A; padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 10.5pt; }
+  .diagram { background: #fff; border: 1px solid #E5E5E3; border-radius: 8px; padding: 14px; margin: 14px 0; text-align: center; page-break-inside: avoid; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram .caption { font-size: 9.5pt; color: #888; margin-top: 6px; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #E5E5E3; padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #FAFAF8; font-weight: 700; }
+  .section { page-break-inside: avoid; }
+  .new-page { page-break-before: always; }
+  .footer-mark { text-align: center; color: #BBB; font-size: 9pt; margin-top: 10mm; }
+</style>
+</head>
+<body>
+
+<!-- ======================== COUVERTURE ======================== -->
+<div class="cover">
+  <div class="logo">O</div>
+  <h1>OPPORTIX</h1>
+  <div class="subtitle">Plateforme de gestion de flotte<br>Documentation de la logique métier</div>
+  <div class="meta">
+    Document technique · Avril 2026<br>
+    Périmètre : URBAN NEO &amp; GREEN
+  </div>
+</div>
+
+<!-- ======================== SOMMAIRE ======================== -->
+<div class="toc">
+  <h2>Sommaire</h2>
+  <ol>
+    <li>Vue d'ensemble &amp; architecture</li>
+    <li>Modèle de données</li>
+    <li>États d'une voiture</li>
+    <li>Cas par cas — Départs</li>
+    <li>Cas par cas — Retours</li>
+    <li>Cas par cas — Dispo</li>
+    <li>Cas par cas — Garage</li>
+    <li>Cas par cas — Vacances chauffeurs</li>
+    <li>Cas par cas — Départs &amp; Retours à prévoir</li>
+    <li>Auto-réparations au chargement</li>
+    <li>Historique conducteurs</li>
+    <li>Archivage</li>
+    <li>Sauvegarde &amp; synchronisation temps réel</li>
+    <li>Rôles et permissions</li>
+  </ol>
+</div>
+
+<!-- ======================== 1. VUE D'ENSEMBLE ======================== -->
+<h1 class="new-page">1 — Vue d'ensemble &amp; architecture</h1>
+
+<p>OPPORTIX est une application web qui gère deux flottes parallèles de véhicules : <span class="tag tag-urban">URBAN NEO</span> et <span class="tag tag-green">GREEN</span>. Elle suit en temps réel les départs, les retours, les voitures disponibles, celles au garage, et les vacances des chauffeurs.</p>
+
+<p>L'application est composée de trois briques :</p>
+
+<div class="diagram">
+<svg viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- Frontend -->
+  <rect x="20" y="60" width="200" height="110" rx="10" fill="#D6E9F8" stroke="#3A9BD5" stroke-width="2"/>
+  <text x="120" y="92" text-anchor="middle" font-size="16" font-weight="700" fill="#1A1A1A">Frontend</text>
+  <text x="120" y="113" text-anchor="middle" font-size="11" fill="#444">React 19 + TypeScript</text>
+  <text x="120" y="130" text-anchor="middle" font-size="11" fill="#444">Vite</text>
+  <text x="120" y="150" text-anchor="middle" font-size="10" fill="#777">App.tsx — single page</text>
+  <!-- Backend -->
+  <rect x="280" y="60" width="200" height="110" rx="10" fill="#FFF1EB" stroke="#E8633A" stroke-width="2"/>
+  <text x="380" y="92" text-anchor="middle" font-size="16" font-weight="700" fill="#1A1A1A">Backend</text>
+  <text x="380" y="113" text-anchor="middle" font-size="11" fill="#444">Express 5 + JWT</text>
+  <text x="380" y="130" text-anchor="middle" font-size="11" fill="#444">Socket.IO (push)</text>
+  <text x="380" y="150" text-anchor="middle" font-size="10" fill="#777">server.cjs</text>
+  <!-- DB -->
+  <rect x="540" y="60" width="200" height="110" rx="10" fill="#E8F8F0" stroke="#1E8A52" stroke-width="2"/>
+  <text x="640" y="92" text-anchor="middle" font-size="16" font-weight="700" fill="#1A1A1A">MongoDB</text>
+  <text x="640" y="113" text-anchor="middle" font-size="11" fill="#444">Collection « data »</text>
+  <text x="640" y="130" text-anchor="middle" font-size="11" fill="#444">+ users, audit, archive</text>
+  <text x="640" y="150" text-anchor="middle" font-size="10" fill="#777">document unique « fleet »</text>
+  <!-- Arrows -->
+  <line x1="220" y1="115" x2="278" y2="115" stroke="#444" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="278" y1="135" x2="220" y2="135" stroke="#444" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="480" y1="115" x2="538" y2="115" stroke="#444" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="538" y1="135" x2="480" y2="135" stroke="#444" stroke-width="2" marker-end="url(#a1)"/>
+  <text x="249" y="108" text-anchor="middle" font-size="9" fill="#666">HTTP /api/data</text>
+  <text x="249" y="150" text-anchor="middle" font-size="9" fill="#666">WebSocket push</text>
+  <text x="509" y="108" text-anchor="middle" font-size="9" fill="#666">find / update</text>
+  <text x="509" y="150" text-anchor="middle" font-size="9" fill="#666">data-changed</text>
+</svg>
+<div class="caption">Figure 1 — Architecture trois tiers. Le frontend persiste tout via PUT /api/data, le serveur diffuse les changements via WebSocket à tous les clients connectés.</div>
+</div>
+
+<p>Toute la logique métier (transitions d'état, sync entre listes, annulations automatiques de vacances, etc.) vit côté <strong>frontend</strong>, dans <code>src/App.tsx</code>. Le backend est un thin layer : il valide les clés, persiste, diffuse, et tient un journal d'audit + une corbeille.</p>
+
+<!-- ======================== 2. MODELE DE DONNEES ======================== -->
+<h1 class="new-page">2 — Modèle de données</h1>
+
+<p>Toutes les données opérationnelles vivent dans <strong>un seul document MongoDB</strong> (clé <code>_key: 'fleet'</code>). Ce document contient les sous-tableaux suivants :</p>
+
+<table>
+<tr><th>Clé</th><th>Contenu</th><th>Affiché dans</th></tr>
+<tr><td><code>u</code></td><td>Voitures de la flotte URBAN NEO</td><td>Onglets Véhicules / Flotte</td></tr>
+<tr><td><code>g</code></td><td>Voitures de la flotte GREEN</td><td>Onglets Véhicules / Flotte</td></tr>
+<tr><td><code>dep</code></td><td>Départs (assignations actives)</td><td>Onglet Départs</td></tr>
+<tr><td><code>ret</code></td><td>Retours</td><td>Onglet Retours</td></tr>
+<tr><td><code>di</code></td><td>Voitures en dispo (pool de disponibilité)</td><td>Diffusion + onglet VH Dispo</td></tr>
+<tr><td><code>ga</code></td><td>Voitures au garage</td><td>Diffusion (split urb/grn) + onglet Garage</td></tr>
+<tr><td><code>va</code></td><td>Vacances chauffeurs</td><td>Diffusion + onglet Vacances</td></tr>
+<tr><td><code>dpv</code></td><td>Départs à prévoir (brouillons commerciaux)</td><td>Diffusion</td></tr>
+<tr><td><code>rpv</code></td><td>Retours à prévoir (brouillons)</td><td>Diffusion</td></tr>
+<tr><td><code>msgs</code></td><td>Messages internes inter-pôles</td><td>Onglet Messagerie</td></tr>
+</table>
+
+<h3>Forme d'une voiture (flotte u / g)</h3>
+<p><code>{ im, mq, mo, le, st, ch }</code> &nbsp;→&nbsp; immatriculation, marque, modèle, leaser, statut, chauffeur.</p>
+
+<h3>Forme d'un départ</h3>
+<p><code>{ id, soc, im, mo, le, ch, dt, no }</code> &nbsp;→&nbsp; société, immat, modèle, leaser, chauffeur, date, note.</p>
+
+<h3>Forme d'un départ à prévoir</h3>
+<p><code>{ id, soc, im?, mo?, le?, ch?, dt?, no?, co? }</code> — tous les champs sont optionnels (sauf <code>id</code>). En plus du départ classique, il y a un champ <code>co</code> (commentaire libre).</p>
+
+<div class="note">
+<strong>À retenir :</strong> il n'y a pas de jointure ni de relation entre tables. C'est un seul document JSON sauvegardé d'un bloc à chaque modification. Toute la cohérence (par exemple "une voiture en mission ne peut pas être en dispo") est garantie par la logique frontend.
+</div>
+
+<!-- ======================== 3. ETATS D'UNE VOITURE ======================== -->
+<h1 class="new-page">3 — États d'une voiture</h1>
+
+<p>Une voiture appartient toujours à exactement une flotte (urban OU green) et a toujours un état combinant <code>st</code> et <code>ch</code> :</p>
+
+<table>
+<tr><th>Statut</th><th>Chauffeur</th><th>Signification</th></tr>
+<tr><td><span class="tag tag-actif">ACTIF</span></td><td>nom du chauffeur</td><td>En mission, livraison en cours</td></tr>
+<tr><td><span class="tag tag-immo">IMMO</span></td><td><code>BUREAU</code></td><td>Au repos, disponible</td></tr>
+<tr><td><span class="tag tag-immo">IMMO</span></td><td><code>VACANCES</code></td><td>Conducteur en congé</td></tr>
+<tr><td><span class="tag tag-immo">IMMO</span></td><td><code>GARAGE [nom]</code></td><td>En réparation</td></tr>
+</table>
+
+<div class="diagram">
+<svg viewBox="0 0 780 460" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- ACTIF -->
+  <rect x="290" y="30" width="200" height="78" rx="10" fill="#E8F8F0" stroke="#1E8A52" stroke-width="2.5"/>
+  <text x="390" y="60" text-anchor="middle" font-size="18" font-weight="800" fill="#1E8A52">ACTIF</text>
+  <text x="390" y="82" text-anchor="middle" font-size="11" fill="#444">ch = nom du chauffeur</text>
+  <text x="390" y="98" text-anchor="middle" font-size="10" fill="#777">en mission</text>
+  <!-- DISPO -->
+  <rect x="40" y="190" width="200" height="78" rx="10" fill="#D6E9F8" stroke="#3A9BD5" stroke-width="2.5"/>
+  <text x="140" y="220" text-anchor="middle" font-size="18" font-weight="800" fill="#3A9BD5">DISPO</text>
+  <text x="140" y="242" text-anchor="middle" font-size="11" fill="#444">st = IMMO &nbsp;|&nbsp; ch = BUREAU</text>
+  <text x="140" y="258" text-anchor="middle" font-size="10" fill="#777">disponible pour assignation</text>
+  <!-- GARAGE -->
+  <rect x="540" y="190" width="200" height="78" rx="10" fill="#FDF4E3" stroke="#D4A027" stroke-width="2.5"/>
+  <text x="640" y="220" text-anchor="middle" font-size="18" font-weight="800" fill="#D4A027">GARAGE</text>
+  <text x="640" y="242" text-anchor="middle" font-size="11" fill="#444">st = IMMO &nbsp;|&nbsp; ch = GARAGE [nom]</text>
+  <text x="640" y="258" text-anchor="middle" font-size="10" fill="#777">en réparation</text>
+  <!-- VACANCES -->
+  <rect x="290" y="350" width="200" height="78" rx="10" fill="#EDE8FA" stroke="#7B61FF" stroke-width="2.5"/>
+  <text x="390" y="380" text-anchor="middle" font-size="18" font-weight="800" fill="#7B61FF">VACANCES</text>
+  <text x="390" y="402" text-anchor="middle" font-size="11" fill="#444">st = IMMO &nbsp;|&nbsp; ch = VACANCES</text>
+  <text x="390" y="418" text-anchor="middle" font-size="10" fill="#777">conducteur en congé</text>
+
+  <!-- ARROWS -->
+  <!-- DISPO <-> ACTIF -->
+  <line x1="240" y1="200" x2="320" y2="115" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="245" y="148" font-size="10" fill="#1E8A52" font-weight="700">+ Départ</text>
+  <line x1="320" y1="115" x2="240" y2="195" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="245" y="178" font-size="10" fill="#C0392B" font-weight="700">+ Retour / Suppr départ</text>
+
+  <!-- DISPO <-> GARAGE -->
+  <line x1="240" y1="220" x2="538" y2="220" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="389" y="213" text-anchor="middle" font-size="10" fill="#B7791F" font-weight="700">+ Garage</text>
+  <line x1="538" y1="245" x2="240" y2="245" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="389" y="262" text-anchor="middle" font-size="10" fill="#3A9BD5" font-weight="700">Sortir / Suppr garage</text>
+
+  <!-- ACTIF <-> VACANCES -->
+  <line x1="370" y1="108" x2="370" y2="348" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="358" y="230" text-anchor="end" font-size="10" fill="#7B61FF" font-weight="700">+ Vacance</text>
+  <line x1="410" y1="348" x2="410" y2="108" stroke="#444" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="422" y="230" font-size="10" fill="#1E8A52" font-weight="700">Suppr vacance</text>
+  <text x="422" y="244" font-size="9" fill="#777">(si voiture encore en dispo)</text>
+  <text x="422" y="258" font-size="10" fill="#1E8A52" font-weight="700">ou + Départ</text>
+  <text x="422" y="272" font-size="9" fill="#777">(annulation auto)</text>
+
+  <!-- VACANCES -> DISPO (transit) -->
+  <path d="M 290 388 Q 180 380 140 270" stroke="#7B61FF" stroke-width="1.5" stroke-dasharray="4 4" fill="none" marker-end="url(#a2)"/>
+  <text x="170" y="335" font-size="9" fill="#7B61FF" font-style="italic">la voiture transite par la dispo</text>
+</svg>
+<div class="caption">Figure 2 — Machine à états d'une voiture. Les transitions sont déclenchées par les actions utilisateur sur les listes (départ, retour, garage, vacance).</div>
+</div>
+
+<!-- ======================== 4. DEPARTS ======================== -->
+<h1 class="new-page">4 — Cas par cas : Départs</h1>
+
+<h2>4.1 — Ajouter un départ</h2>
+
+<p>C'est le cas le plus riche de l'application. Une voiture qui part en mission déclenche cinq sous-actions automatiques :</p>
+
+<ol>
+  <li><strong>Sortie de dispo</strong> — si l'immat se trouvait dans le pool dispo, elle en est retirée.</li>
+  <li><strong>Sortie du garage</strong> — si elle y était, elle en sort aussi.</li>
+  <li><strong>Création flotte si manquante</strong> — si l'immat n'existe ni en URBAN NEO ni en GREEN, la voiture est <strong>créée</strong> dans la bonne flotte (selon la <code>soc</code> du départ).</li>
+  <li><strong>Synchronisation flotte</strong> — la voiture passe à <span class="tag tag-actif">ACTIF</span> avec le chauffeur du départ. Marque, modèle et leaser sont remplis depuis le départ s'ils manquaient.</li>
+  <li><strong>Annulation vacances auto</strong> — si le chauffeur avait une vacance enregistrée, elle est <strong>supprimée et archivée</strong> automatiquement. Plus besoin de la retirer manuellement.</li>
+</ol>
+
+<div class="diagram">
+<svg viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- Start -->
+  <rect x="320" y="20" width="160" height="44" rx="22" fill="#1A1A1A"/>
+  <text x="400" y="48" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">+ Ajouter un départ</text>
+  <line x1="400" y1="64" x2="400" y2="90" stroke="#444" stroke-width="2" marker-end="url(#a3)"/>
+  <!-- Step 1: dispo -->
+  <rect x="40" y="100" width="200" height="44" rx="6" fill="#D6E9F8" stroke="#3A9BD5"/>
+  <text x="140" y="128" text-anchor="middle" font-size="11" font-weight="600">retirer de DISPO si présent</text>
+  <line x1="320" y1="120" x2="244" y2="120" stroke="#444" stroke-width="1.5" marker-end="url(#a3)"/>
+  <line x1="380" y1="90" x2="320" y2="120" stroke="#444" stroke-width="1.5"/>
+  <!-- Step 2: garage -->
+  <rect x="40" y="160" width="200" height="44" rx="6" fill="#FDF4E3" stroke="#D4A027"/>
+  <text x="140" y="188" text-anchor="middle" font-size="11" font-weight="600">retirer du GARAGE si présent</text>
+  <line x1="320" y1="180" x2="244" y2="180" stroke="#444" stroke-width="1.5" marker-end="url(#a3)"/>
+  <line x1="380" y1="100" x2="320" y2="180" stroke="#444" stroke-width="1.5"/>
+  <!-- Step 3: fleet sync -->
+  <rect x="290" y="100" width="220" height="80" rx="6" fill="#E8F8F0" stroke="#1E8A52"/>
+  <text x="400" y="128" text-anchor="middle" font-size="12" font-weight="700">flotte → ACTIF</text>
+  <text x="400" y="146" text-anchor="middle" font-size="10">ch = chauffeur du départ</text>
+  <text x="400" y="162" text-anchor="middle" font-size="10">création si immat inconnu</text>
+  <line x1="400" y1="180" x2="400" y2="208" stroke="#444" stroke-width="1.5" marker-end="url(#a3)"/>
+  <!-- Step 4: vacances -->
+  <rect x="290" y="218" width="220" height="60" rx="6" fill="#EDE8FA" stroke="#7B61FF"/>
+  <text x="400" y="244" text-anchor="middle" font-size="12" font-weight="700">vacance du chauffeur ?</text>
+  <text x="400" y="262" text-anchor="middle" font-size="10">→ archivée automatiquement</text>
+  <line x1="400" y1="278" x2="400" y2="306" stroke="#444" stroke-width="1.5" marker-end="url(#a3)"/>
+  <!-- End -->
+  <rect x="320" y="312" width="160" height="40" rx="20" fill="#1E8A52"/>
+  <text x="400" y="338" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">PUT /api/data</text>
+  <!-- Side note -->
+  <rect x="560" y="100" width="220" height="80" rx="6" fill="#FAFAF8" stroke="#E5E5E3" stroke-dasharray="3 3"/>
+  <text x="670" y="128" text-anchor="middle" font-size="11" font-weight="700" fill="#666">sync depuis le départ</text>
+  <text x="670" y="146" text-anchor="middle" font-size="10" fill="#777">marque/modèle/leaser</text>
+  <text x="670" y="162" text-anchor="middle" font-size="10" fill="#777">si manquants en flotte</text>
+  <line x1="510" y1="140" x2="558" y2="140" stroke="#999" stroke-width="1.5" stroke-dasharray="3 3"/>
+</svg>
+<div class="caption">Figure 3 — Workflow d'ajout d'un départ. Toutes les étapes sont packagées dans une seule sauvegarde (PUT /api/data), pas d'état intermédiaire visible.</div>
+</div>
+
+<h2>4.2 — Éditer un départ</h2>
+
+<ul>
+  <li>Met à jour les champs (modèle, leaser, chauffeur, date, note) dans la liste des départs.</li>
+  <li><strong>Si la société change</strong> (URBAN NEO ↔ GREEN), la voiture est <strong>physiquement déplacée</strong> d'une flotte à l'autre, en gardant tous ses attributs.</li>
+  <li>Le modèle et le leaser sont aussi propagés vers la fiche flotte.</li>
+</ul>
+
+<h2>4.3 — Supprimer un départ</h2>
+
+<ol>
+  <li>Le départ est archivé dans la collection <code>archive</code>.</li>
+  <li>La voiture <strong>revient automatiquement en dispo</strong> avec <code>st: IMMO</code>, <code>ch: BUREAU</code>.</li>
+</ol>
+
+<div class="note">Suppression = annulation. C'est utilisé quand un départ a été créé par erreur, ou quand un livreur a finalement renoncé à la mission. Si tu veux marquer un départ comme terminé, c'est un <strong>retour</strong> qu'il faut créer.</div>
+
+<!-- ======================== 5. RETOURS ======================== -->
+<h1 class="new-page">5 — Cas par cas : Retours</h1>
+
+<h2>5.1 — Ajouter un retour</h2>
+
+<ol>
+  <li>Si la voiture n'est pas déjà en dispo, elle y est ajoutée (avec son modèle récupéré depuis la flotte).</li>
+  <li>La voiture passe à <span class="tag tag-immo">IMMO</span>, <code>ch: BUREAU</code> dans la flotte.</li>
+</ol>
+
+<h2>5.2 — Supprimer un retour</h2>
+
+<p>Retire simplement la voiture de la dispo. La flotte n'est pas touchée.</p>
+
+<!-- ======================== 6. DISPO ======================== -->
+<h1 class="new-page">6 — Cas par cas : Dispo</h1>
+
+<p>La dispo est le <strong>pool de voitures disponibles</strong>. C'est l'état "neutre" : la voiture est physiquement là, prête à être réassignée.</p>
+
+<h2>6.1 — Ajouter manuellement à la dispo</h2>
+
+<ol>
+  <li>Création de la voiture dans la flotte si elle n'existe pas encore (selon la <code>soc</code> du formulaire).</li>
+  <li>Forçage à <span class="tag tag-immo">IMMO</span>, <code>ch: BUREAU</code>.</li>
+</ol>
+
+<h2>6.2 — Comment une voiture arrive en dispo automatiquement</h2>
+
+<ul>
+  <li>Suppression d'un départ → retour en dispo</li>
+  <li>Ajout d'un retour → entrée en dispo</li>
+  <li>Ajout d'une vacance → la voiture du conducteur passe en dispo (note "VACANCES")</li>
+  <li>Sortie ou suppression d'une fiche garage → entrée en dispo (note "Sortie garage [nom]")</li>
+</ul>
+
+<h2>6.3 — Supprimer une voiture de la dispo</h2>
+
+<p>Simple retrait de la liste. Aucun effet de bord sur la flotte (la voiture reste en IMMO BUREAU jusqu'à ce qu'un autre événement la modifie).</p>
+
+<!-- ======================== 7. GARAGE ======================== -->
+<h1 class="new-page">7 — Cas par cas : Garage</h1>
+
+<p>Sur la page diffusion, le garage est <strong>séparé en deux blocs</strong> : <span class="tag tag-garage">GARAGE URBAN</span> et <span class="tag tag-garage">GARAGE GREEN</span>. La société est implicite par bloc, donc le formulaire d'ajout n'a plus à la demander.</p>
+
+<h2>7.1 — Ajouter au garage</h2>
+
+<ol>
+  <li>La voiture passe à <span class="tag tag-immo">IMMO</span> avec <code>ch: GARAGE [nom du garage]</code>.</li>
+  <li>Elle est retirée de la dispo si elle y était.</li>
+  <li><strong>Réconciliation flotte</strong> — si la voiture est dans la "mauvaise" flotte (par exemple en URBAN NEO mais on l'ajoute au GARAGE GREEN), elle est <strong>déplacée</strong> vers la flotte cible. La société du garage est la source de vérité.</li>
+  <li>Si l'immat n'existe nulle part, la voiture est créée dans la bonne flotte.</li>
+</ol>
+
+<div class="diagram">
+<svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- Dispo -->
+  <rect x="40" y="115" width="180" height="60" rx="8" fill="#D6E9F8" stroke="#3A9BD5" stroke-width="2"/>
+  <text x="130" y="143" text-anchor="middle" font-size="14" font-weight="700" fill="#3A9BD5">DISPO</text>
+  <text x="130" y="160" text-anchor="middle" font-size="10" fill="#666">pool disponible</text>
+  <!-- Garage -->
+  <rect x="540" y="115" width="180" height="60" rx="8" fill="#FDF4E3" stroke="#D4A027" stroke-width="2"/>
+  <text x="630" y="143" text-anchor="middle" font-size="14" font-weight="700" fill="#D4A027">GARAGE</text>
+  <text x="630" y="160" text-anchor="middle" font-size="10" fill="#666">en réparation</text>
+  <!-- Forward -->
+  <line x1="220" y1="135" x2="538" y2="135" stroke="#444" stroke-width="2" marker-end="url(#a4)"/>
+  <rect x="290" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#D4A027"/>
+  <text x="390" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#B7791F">+ Ajouter au garage</text>
+  <text x="390" y="92" text-anchor="middle" font-size="9" fill="#999">flotte: ACTIF/IMMO → IMMO + GARAGE [nom]</text>
+  <!-- Backward -->
+  <line x1="538" y1="160" x2="220" y2="160" stroke="#444" stroke-width="2" marker-end="url(#a4)"/>
+  <rect x="290" y="170" width="200" height="28" rx="4" fill="#FFF1EB" stroke="#E8633A"/>
+  <text x="390" y="188" text-anchor="middle" font-size="11" font-weight="700" fill="#E8633A">Sortir du garage</text>
+  <text x="390" y="217" text-anchor="middle" font-size="9" fill="#999">note "Sortie garage [nom]" en dispo</text>
+  <!-- Notes -->
+  <text x="380" y="50" text-anchor="middle" font-size="11" fill="#666" font-style="italic">Le bouton orange « Sortir » est disponible</text>
+  <text x="380" y="65" text-anchor="middle" font-size="11" fill="#666" font-style="italic">sur la diffusion ET dans l'onglet Garage.</text>
+  <!-- Trash -->
+  <rect x="540" y="220" width="180" height="36" rx="8" fill="#FDECEC" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="630" y="244" text-anchor="middle" font-size="11" font-weight="700" fill="#C0392B">× Retirer (suppression)</text>
+  <line x1="630" y1="178" x2="630" y2="219" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#a4)"/>
+  <text x="640" y="200" font-size="9" fill="#C0392B">archivage</text>
+</svg>
+<div class="caption">Figure 4 — Cycle garage. Le bouton « Sortir » (orange) déplace vers dispo. Le bouton « × Retirer » (rouge) fait la même chose mais archive en plus la ligne (utilisé pour corriger une erreur de saisie).</div>
+</div>
+
+<h2>7.2 — Sortir du garage (bouton orange « Sortir »)</h2>
+
+<ol>
+  <li>La voiture est retirée du garage.</li>
+  <li>Elle est ajoutée en dispo avec une note <code>Sortie garage [nom]</code>.</li>
+  <li>La flotte garde son statut <span class="tag tag-immo">IMMO</span> (elle n'est pas réassignée tant qu'on ne crée pas un départ).</li>
+</ol>
+
+<h2>7.3 — Supprimer une fiche garage (bouton ×)</h2>
+
+<p>Effet identique au bouton « Sortir », mais en plus la fiche est archivée. C'est destiné à corriger une erreur de saisie.</p>
+
+<!-- ======================== 8. VACANCES ======================== -->
+<h1 class="new-page">8 — Cas par cas : Vacances chauffeurs</h1>
+
+<h2>8.1 — Ajouter une vacance</h2>
+
+<ol>
+  <li>L'app cherche la voiture actuellement attribuée au chauffeur (par <code>ch</code> dans la flotte).</li>
+  <li>Si elle existe et n'est pas déjà en dispo, elle est ajoutée à la dispo avec note <code>VACANCES JJ/MM-JJ/MM</code>.</li>
+  <li>La voiture passe à <span class="tag tag-immo">IMMO</span>, <code>ch: VACANCES</code>.</li>
+</ol>
+
+<h2>8.2 — Supprimer une vacance — deux scénarios</h2>
+
+<p>Quand une vacance est supprimée, le chauffeur est libéré mais on ne le réattribue <strong>pas automatiquement</strong> à son ancienne voiture. Dans la pratique, un chauffeur qui revient de congé reçoit fréquemment une voiture différente — le lien chauffeur ↔ voiture est porté par le prochain départ qu'on lui crée, pas par sa précédente attribution.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- Start -->
+  <rect x="290" y="20" width="200" height="44" rx="22" fill="#7B61FF"/>
+  <text x="390" y="48" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">Suppression d'une vacance</text>
+  <line x1="390" y1="64" x2="390" y2="90" stroke="#444" stroke-width="2" marker-end="url(#a5)"/>
+  <!-- Decision -->
+  <polygon points="390,90 540,160 390,230 240,160" fill="#FAFAF8" stroke="#444" stroke-width="2"/>
+  <text x="390" y="155" text-anchor="middle" font-size="11" font-weight="700">Voiture du chauffeur</text>
+  <text x="390" y="172" text-anchor="middle" font-size="11" font-weight="700">encore en dispo ?</text>
+  <!-- Yes -->
+  <line x1="240" y1="160" x2="120" y2="240" stroke="#444" stroke-width="2" marker-end="url(#a5)"/>
+  <text x="155" y="195" font-size="11" font-weight="700" fill="#3A9BD5">OUI</text>
+  <rect x="20" y="245" width="240" height="60" rx="8" fill="#D6E9F8" stroke="#3A9BD5" stroke-width="2"/>
+  <text x="140" y="270" text-anchor="middle" font-size="11" font-weight="700" fill="#3A9BD5">Voiture redevient dispo</text>
+  <text x="140" y="287" text-anchor="middle" font-size="10" fill="#444">flotte ch: VACANCES → BUREAU</text>
+  <text x="140" y="300" text-anchor="middle" font-size="10" fill="#444">marque "VACANCES" nettoyée</text>
+  <!-- No -->
+  <line x1="540" y1="160" x2="660" y2="240" stroke="#444" stroke-width="2" marker-end="url(#a5)"/>
+  <text x="615" y="195" font-size="11" font-weight="700" fill="#C0392B">NON</text>
+  <rect x="540" y="245" width="240" height="60" rx="8" fill="#FDECEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="660" y="270" text-anchor="middle" font-size="11" font-weight="700" fill="#C0392B">Pas touche à la flotte</text>
+  <text x="660" y="287" text-anchor="middle" font-size="10" fill="#444">la voiture a déjà été reprise</text>
+  <text x="660" y="300" text-anchor="middle" font-size="10" fill="#444">par un autre chauffeur</text>
+</svg>
+<div class="caption">Figure 5 — Suppression d'une vacance. Dans tous les cas, le chauffeur n'est pas réattribué à son ancienne voiture — il sera lié à une nouvelle voiture (peut-être la même, peut-être une autre) lors de son prochain départ.</div>
+</div>
+
+<p><strong>Cas 1 — la voiture est encore dans le pool dispo</strong> (avec une note "VACANCES") : on enlève la marque VACANCES côté dispo et côté flotte (la fiche passe de <code>ch: VACANCES</code> à <code>ch: BUREAU</code>). La voiture devient une voiture dispo standard, prête à être attribuée à n'importe qui.</p>
+
+<p><strong>Cas 2 — la voiture a déjà été reprise par quelqu'un d'autre</strong> entre temps (via un départ) : on ne touche à rien d'autre que la liste des vacances. La voiture est déjà dans son nouvel état correct.</p>
+
+<h2>8.3 — Annulation automatique par un départ</h2>
+
+<p>Si tu crées un départ pour un chauffeur qui est <strong>en vacances</strong>, sa vacance est <strong>automatiquement archivée</strong> et supprimée. Le chauffeur passe immédiatement en mission (cf. section 4.1, étape 5).</p>
+
+<!-- ======================== 9. DPV / RPV ======================== -->
+<h1 class="new-page">9 — Cas par cas : Départs et Retours à prévoir</h1>
+
+<p>Cette section est pensée pour les <strong>commerciaux</strong>. Quand on sait qu'une mission va arriver mais qu'on ne connaît pas encore tous les détails (immat, chauffeur, date exacte), on peut quand même créer une <strong>fiche brouillon</strong>.</p>
+
+<h2>9.1 — Ajouter un départ à prévoir</h2>
+
+<ul>
+  <li><strong>Aucun champ n'est obligatoire.</strong> Tu peux créer une ligne avec juste un commentaire ("Livraison Bordeaux semaine pro").</li>
+  <li>Aucun effet de bord : la flotte n'est pas modifiée, aucune voiture n'est déplacée.</li>
+  <li>La fiche apparaît dans le bloc « DEPARTS À PRÉVOIR » de la diffusion.</li>
+</ul>
+
+<h2>9.2 — Compléter une fiche</h2>
+
+<p>Le commercial peut éditer la fiche au fil de l'eau (immat trouvée, chauffeur attribué, date confirmée…). Champs : société, immat, modèle, leaser, chauffeur, date, note, <strong>commentaire libre</strong>.</p>
+
+<h2>9.3 — Confirmer (bouton ✓ vert)</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- DPV box -->
+  <rect x="40" y="100" width="220" height="80" rx="10" fill="#FDECEA" stroke="#D94F3B" stroke-width="2"/>
+  <text x="150" y="128" text-anchor="middle" font-size="14" font-weight="700" fill="#D94F3B">DEPART À PRÉVOIR</text>
+  <text x="150" y="148" text-anchor="middle" font-size="10" fill="#666">brouillon, champs optionnels</text>
+  <text x="150" y="164" text-anchor="middle" font-size="10" fill="#666">+ commentaire libre</text>
+  <!-- Confirm button -->
+  <rect x="320" y="125" width="140" height="40" rx="20" fill="#E8F8F0" stroke="#1E8A52" stroke-width="2"/>
+  <text x="390" y="151" text-anchor="middle" font-size="13" font-weight="700" fill="#1E8A52">✓ Confirmer</text>
+  <line x1="260" y1="140" x2="318" y2="140" stroke="#444" stroke-width="2" marker-end="url(#a6)"/>
+  <line x1="460" y1="140" x2="518" y2="140" stroke="#444" stroke-width="2" marker-end="url(#a6)"/>
+  <!-- Real depart -->
+  <rect x="520" y="100" width="220" height="80" rx="10" fill="#E8F8F0" stroke="#1E8A52" stroke-width="2"/>
+  <text x="630" y="128" text-anchor="middle" font-size="14" font-weight="700" fill="#1E8A52">DEPART RÉEL</text>
+  <text x="630" y="148" text-anchor="middle" font-size="10" fill="#666">déclenche toute la logique</text>
+  <text x="630" y="164" text-anchor="middle" font-size="10" fill="#666">de la section 4.1</text>
+  <!-- Validation note -->
+  <rect x="240" y="220" width="300" height="60" rx="6" fill="#FFF8F0" stroke="#E8633A" stroke-width="1.5"/>
+  <text x="390" y="244" text-anchor="middle" font-size="11" font-weight="700" fill="#E8633A">Validation au moment du clic</text>
+  <text x="390" y="262" text-anchor="middle" font-size="10" fill="#666">si l'immat est vide → toast d'erreur,</text>
+  <text x="390" y="276" text-anchor="middle" font-size="10" fill="#666">la confirmation est annulée</text>
+  <line x1="390" y1="167" x2="390" y2="218" stroke="#E8633A" stroke-width="1.5" stroke-dasharray="3 3"/>
+</svg>
+<div class="caption">Figure 6 — Flow de confirmation d'un départ à prévoir. La note et le commentaire sont fusionnés au format « note | commentaire » avant d'être passés à la fonction add() classique.</div>
+</div>
+
+<ol>
+  <li><strong>Validation</strong> : si l'immat est vide → toast d'erreur, on n'avance pas.</li>
+  <li>La note et le commentaire sont fusionnés au format <code>note | commentaire</code>.</li>
+  <li>La fonction d'ajout de départ classique est appelée — donc <strong>tous les effets de bord de la section 4.1 s'enclenchent</strong> : sortie de dispo, sortie de garage, annulation de vacances, création flotte si manquante, etc.</li>
+  <li>La fiche disparaît de la liste « à prévoir » et apparaît dans l'onglet Départs.</li>
+</ol>
+
+<h2>9.4 — Supprimer une fiche à prévoir</h2>
+
+<p>Retire simplement la ligne, sans rien d'autre. C'est juste un brouillon qu'on jette.</p>
+
+<p>Le mécanisme est strictement le même pour les <strong>retours à prévoir</strong>.</p>
+
+<!-- ======================== 10. AUTO REPAIR ======================== -->
+<h1 class="new-page">10 — Auto-réparations au chargement</h1>
+
+<p>À chaque ouverture de page (et toutes les 15 secondes en fallback), l'app récupère le document complet via <code>GET /api/data</code>, puis applique cinq passes de réparation automatique avant d'afficher les données :</p>
+
+<ol>
+  <li><strong>Re-parse marque/modèle</strong> — si une voiture a <code>mo: "BYD SEAL"</code> mais <code>mq</code> vide, c'est splitté en <code>mq: "BYD"</code>, <code>mo: "SEAL"</code>.</li>
+  <li><strong>Sync depuis les départs</strong> — pour chaque départ, si l'immat n'existe pas dans la flotte, la voiture est créée dans la bonne société. Si elle existe mais sans modèle/leaser, ils sont remplis depuis le départ.</li>
+  <li><strong>Patch ids garage</strong> — tout item garage sans <code>id</code> reçoit un UUID en mémoire (nécessaire pour que les boutons Sortir / Retirer fonctionnent uniformément).</li>
+  <li><strong>Patch société garage</strong> — tout item garage sans <code>soc</code> est classé URBAN ou GREEN selon dans quelle flotte se trouve son immat. Comme ça, aucune voiture ne « disparaît » dans le split urb/grn.</li>
+  <li><strong>Persistance</strong> — si l'une de ces réparations a modifié quelque chose, les changements sont immédiatement sauvegardés via PUT /api/data.</li>
+</ol>
+
+<div class="note">Cette logique d'auto-réparation rend l'app résistante aux imports manuels, aux anciennes données, et aux corruptions partielles. Elle ne fait jamais disparaître de données — elle ne fait qu'enrichir.</div>
+
+<!-- ======================== 11. HISTORIQUE ======================== -->
+<h1 class="new-page">11 — Historique conducteurs</h1>
+
+<p>Endpoint : <code>GET /api/history</code>. À chaque appel, le serveur :</p>
+
+<ol>
+  <li>Récupère les départs et retours <strong>actuels</strong> (depuis le document fleet).</li>
+  <li>Récupère les départs et retours <strong>archivés</strong> (collection <code>archive</code>).</li>
+  <li>Fusionne les deux et groupe par chauffeur (nom en majuscules, espaces trim).</li>
+  <li>Ajoute aussi le véhicule actuellement attribué dans la flotte (entrée de type <code>vehicule_actuel</code>).</li>
+</ol>
+
+<p>Le résultat est un objet <code>{ NOM_CHAUFFEUR: [événements...] }</code>, affiché dans l'onglet Historique avec une timeline triée par chauffeur. Comme ça, on peut tout savoir d'un livreur : quelle voiture il a actuellement, ses derniers départs, ses derniers retours, même ceux qu'on a supprimés / archivés.</p>
+
+<!-- ======================== 12. ARCHIVAGE ======================== -->
+<h1 class="new-page">12 — Archivage (suppression douce)</h1>
+
+<p>Toute « suppression » d'un item (départ, retour, vacance, garage, dispo, à-prévoir, etc.) passe par <code>POST /api/archive</code> qui stocke l'item dans la collection <code>archive</code> avec :</p>
+
+<table>
+<tr><th>Champ</th><th>Contenu</th></tr>
+<tr><td><code>section</code></td><td>type d'item (deps, rets, vacs, garage, …)</td></tr>
+<tr><td><code>item</code></td><td>la donnée complète au moment de la suppression</td></tr>
+<tr><td><code>deletedBy</code></td><td>username de l'utilisateur</td></tr>
+<tr><td><code>deletedAt</code></td><td>timestamp</td></tr>
+</table>
+
+<p>Rien n'est jamais réellement perdu côté base. L'admin peut consulter les 200 dernières suppressions via <code>GET /api/archive</code>.</p>
+
+<!-- ======================== 13. SAVE & SYNC ======================== -->
+<h1 class="new-page">13 — Sauvegarde &amp; synchronisation temps réel</h1>
+
+<h2>13.1 — Sauvegarde</h2>
+
+<p>Toutes les écritures passent par la même fonction frontend, qui PUT le document complet sur <code>/api/data</code>. Côté serveur, seules les clés suivantes sont autorisées : <code>u, g, ga, dep, ret, di, va, pr, dpv, rpv, msgs</code>. Toute autre clé fait échouer la requête.</p>
+
+<h2>13.2 — Verrou anti-race</h2>
+
+<p>Un drapeau <code>savingRef</code> empêche un rechargement de tomber pendant une sauvegarde en cours, et inversement. Sans ça, on aurait des écrasements involontaires quand plusieurs onglets sont ouverts.</p>
+
+<h2>13.3 — Push temps réel</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+  </defs>
+  <!-- User A -->
+  <rect x="20" y="40" width="180" height="60" rx="8" fill="#D6E9F8" stroke="#3A9BD5" stroke-width="2"/>
+  <text x="110" y="68" text-anchor="middle" font-size="13" font-weight="700">Utilisateur A</text>
+  <text x="110" y="85" text-anchor="middle" font-size="10" fill="#666">crée un départ</text>
+  <!-- Server -->
+  <rect x="290" y="100" width="200" height="80" rx="8" fill="#FFF1EB" stroke="#E8633A" stroke-width="2"/>
+  <text x="390" y="130" text-anchor="middle" font-size="14" font-weight="700">Express + Socket.IO</text>
+  <text x="390" y="148" text-anchor="middle" font-size="10" fill="#666">PUT /api/data</text>
+  <text x="390" y="162" text-anchor="middle" font-size="10" fill="#666">→ broadcast 'data-changed'</text>
+  <!-- User B -->
+  <rect x="580" y="40" width="180" height="60" rx="8" fill="#E8F8F0" stroke="#1E8A52" stroke-width="2"/>
+  <text x="670" y="68" text-anchor="middle" font-size="13" font-weight="700">Utilisateur B</text>
+  <text x="670" y="85" text-anchor="middle" font-size="10" fill="#666">page rafraîchie auto</text>
+  <!-- User C -->
+  <rect x="580" y="180" width="180" height="60" rx="8" fill="#EDE8FA" stroke="#7B61FF" stroke-width="2"/>
+  <text x="670" y="208" text-anchor="middle" font-size="13" font-weight="700">Utilisateur C</text>
+  <text x="670" y="225" text-anchor="middle" font-size="10" fill="#666">page rafraîchie auto</text>
+  <!-- Arrows -->
+  <line x1="200" y1="100" x2="288" y2="130" stroke="#444" stroke-width="2" marker-end="url(#a7)"/>
+  <text x="220" y="120" font-size="9" fill="#666">PUT</text>
+  <line x1="490" y1="125" x2="578" y2="80" stroke="#444" stroke-width="2" marker-end="url(#a7)"/>
+  <text x="535" y="105" font-size="9" fill="#666">data-changed</text>
+  <line x1="490" y1="160" x2="578" y2="195" stroke="#444" stroke-width="2" marker-end="url(#a7)"/>
+  <text x="535" y="195" font-size="9" fill="#666">data-changed</text>
+</svg>
+<div class="caption">Figure 7 — Push temps réel via Socket.IO. Quand un utilisateur sauvegarde, tous les autres clients connectés (room « authed ») reçoivent l'événement et rechargent automatiquement les données.</div>
+</div>
+
+<h2>13.4 — Fallback polling</h2>
+
+<p>Au cas où le WebSocket sauterait (réseau, proxy…), chaque client refait un GET /api/data toutes les 15 secondes pour rester à jour. C'est invisible pour l'utilisateur.</p>
+
+<!-- ======================== 14. ROLES ======================== -->
+<h1 class="new-page">14 — Rôles et permissions</h1>
+
+<table>
+<tr><th>Rôle</th><th>Lecture</th><th>Modifications</th><th>Gestion utilisateurs</th><th>Audit / Archive</th></tr>
+<tr><td><strong>lecteur</strong></td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+<tr><td><strong>editeur</strong></td><td>✓</td><td>✓</td><td>✗</td><td>✗</td></tr>
+<tr><td><strong>admin</strong></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+</table>
+
+<p>Côté serveur, trois middlewares font respecter les règles : <code>canEdit</code> (bloque les lecteurs), <code>canManageUsers</code> (bloque les lecteurs) et <code>adminOnly</code> (admin uniquement). Côté frontend, tous les boutons d'action sont conditionnés sur <code>user.role !== 'lecteur'</code>, donc un lecteur ne voit même pas les boutons d'ajout/édition/suppression.</p>
+
+<p>Authentification par <strong>JWT</strong>, expiration 12 heures, mots de passe stockés en bcrypt. Login limité à 10 tentatives par 15 minutes. API limitée à 120 requêtes par minute.</p>
+
+<div class="footer-mark">— Fin du document —</div>
+
+</body>
+</html>
