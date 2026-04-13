@@ -559,8 +559,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
               {[
                 {l:"TOTAL VOITURES",v:all.length,c:"#1A1A1A"},
-                {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",a:nUA,im:nUI},
-                {l:"GREEN",v:green.length,c:"#2FAA6B",a:nGA,im:nGI},
+                {l:"URBAN NEO",v:urban.length,c:"#3A9BD5",a:nUA,
+                  dispo:urban.filter(v=>disp.find((d:any)=>d.im===v.im)).length,
+                  gar:urban.filter(v=>garage.find((g:any)=>g.im===v.im)).length},
+                {l:"GREEN",v:green.length,c:"#2FAA6B",a:nGA,
+                  dispo:green.filter(v=>disp.find((d:any)=>d.im===v.im)).length,
+                  gar:green.filter(v=>garage.find((g:any)=>g.im===v.im)).length},
                 {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF"},
               ].map((k:any,i:number)=>(
                 <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
@@ -570,7 +574,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                       <div className="stat-value" style={{fontSize:32,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
                       <div style={{display:"flex",flexDirection:"column",gap:2,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1.1}}>
                         <div style={{fontSize:15,fontWeight:800,color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</div>
-                        <div style={{fontSize:15,fontWeight:800,color:"#C0392B"}}>{k.im} IMMO</div>
+                        <div style={{fontSize:13,fontWeight:800,color:"#3A9BD5"}}>{k.dispo} DISPO</div>
+                        <div style={{fontSize:13,fontWeight:800,color:"#D4A027"}}>{k.gar} GARAGE</div>
                       </div>
                     </div>
                   ):(
