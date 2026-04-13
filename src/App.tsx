@@ -613,6 +613,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"URBAN NEO",im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("garage",id)}
+                onEdit={(id:any,updated:any)=>edit("garage",id,updated)}
                 onExit={(id:any)=>del("garage",id)}
                 user={user}
               />
@@ -622,6 +623,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"GREEN",im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("garage",id)}
+                onEdit={(id:any,updated:any)=>edit("garage",id,updated)}
                 onExit={(id:any)=>del("garage",id)}
                 user={user}
               />
@@ -714,7 +716,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         />}
         {tab==="garage"&&<CrudP title="Garage" color="#D4A027" data={garage} type="garage" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Garage","gar","Nom"],["Entree","de","JJ/MM"],["Sortie","ds","JJ/MM"],["Jours","ji","0"]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} exitItem={(t:string,id:any)=>del(t,id)} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} exitItem={(t:string,id:any)=>del(t,id)} user={user}
           cols="80px 100px 90px 1fr 70px 70px 50px 110px" heads={["SOCIETE","IMMAT","MODELE","GARAGE","ENTREE","SORTIE","JOURS",""]}
           rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:11}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
         />}
