@@ -575,7 +575,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                       <div style={{display:"flex",flexDirection:"column",gap:2,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1.1}}>
                         <div style={{fontSize:15,fontWeight:800,color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</div>
                         <div style={{fontSize:13,fontWeight:800,color:"#3A9BD5"}}>{k.dispo} DISPO</div>
-                        <div style={{fontSize:13,fontWeight:800,color:"#D4A027"}}>{k.gar} GARAGE</div>
+                        <div style={{fontSize:13,fontWeight:800,color:"#C0392B"}}>{k.gar} GARAGE</div>
                       </div>
                     </div>
                   ):(
