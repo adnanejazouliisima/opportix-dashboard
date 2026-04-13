@@ -101,6 +101,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [fTab,setFTab]=useState("urban");
   const [search,setSearch]=useState("");
   const [delC,setDelC]=useState<string|null>(null);
+  const [editFleetIm,setEditFleetIm]=useState<string|null>(null);
+  const [editFleetF,setEditFleetF]=useState<any>({});
   const [usersList, setUsersList] = useState<any[]>([]);
   const [history,setHistory]=useState<any>({});
   const [histSearch,setHistSearch]=useState("");
@@ -676,21 +678,49 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             {showAdd==="fleet"&&<AddBox fields={[["Immat *","im","XX-000-XX"],["Marque","mq","HYUNDAI"],["Modele","mo","KONA"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"]]} form={form} setForm={setForm} onAdd={()=>{if(!form.im?.trim())return;add(fTab,{...form,im:form.im.toUpperCase().trim(),mq:(form.mq||"").toUpperCase().trim(),st:form.st||"ACTIF"});}} extra={<Sel l="Statut" v={form.st||"ACTIF"} set={(v:string)=>setForm({...form,st:v})} opts={["ACTIF","IMMO"]}/>}/>}
             <div style={{fontSize:11,color:"#AAA",marginBottom:6}}>{filt.length} VH</div>
             <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-              <div className="diff-head" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 80px",padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+              <div className="diff-head" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 110px",padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
                 <span>IMMAT</span><span>CHAUFFEUR</span><span>MARQUE</span><span>MODELE</span><span>LEASER</span><span>STATUT</span><span style={{textAlign:"right"}}></span>
               </div>
               <div style={{maxHeight:480,overflowY:"auto"}}>
-                {filt.map((v,i)=>(
-                  <div key={v.im+i} className="rw" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 80px",padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
-                    <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:600,color:"#1A1A1A"}}>{v.im}</span>
-                    <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span>
-                    <span style={{color:"#777",fontSize:11}}>{v.mq}</span>
-                    <span style={{color:"#777",fontSize:11}}>{v.mo}</span>
-                    <span style={{color:"#AAA",fontSize:10}}>{v.le}</span>
-                    <span><button onClick={()=>tog(v.im)} style={{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit",background:v.st==="ACTIF"?"#E8F8F0":"#FDECEC",color:v.st==="ACTIF"?"#1E8A52":"#C0392B"}}>{v.st}</button></span>
-                    <span style={{textAlign:"right"}}>{delC===v.im?<span style={{display:"inline-flex",gap:2}}><button onClick={()=>del(fTab,fTab==="urban"?urban.indexOf(v):green.indexOf(v),true)} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelC(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></span>:<button className="dl" onClick={()=>setDelC(v.im)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Suppr</button>}</span>
+                {filt.map((v,i)=>{
+                  const isEditing=editFleetIm===v.im;
+                  const saveFleet=()=>{
+                    const idx=fTab==="urban"?urban.indexOf(v):green.indexOf(v);
+                    const arr=fTab==="urban"?urban:green;
+                    const setArr=fTab==="urban"?setUrban:setGreen;
+                    const k=fTab==="urban"?"u":"g";
+                    const upd={...v,...editFleetF,im:(editFleetF.im||v.im).toUpperCase().trim(),mq:(editFleetF.mq??v.mq??"").toUpperCase().trim()};
+                    const n=arr.map((x:any,j:number)=>j===idx?upd:x);
+                    setArr(n);sv({[k]:n});
+                    setEditFleetIm(null);setEditFleetF({});
+                  };
+                  return (
+                  <div key={v.im+i} className="rw" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 110px",padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
+                    {isEditing?<>
+                      <input value={editFleetF.im??v.im} onChange={e=>setEditFleetF({...editFleetF,im:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}/>
+                      <input value={editFleetF.ch??v.ch??""} onChange={e=>setEditFleetF({...editFleetF,ch:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}/>
+                      <input value={editFleetF.mq??v.mq??""} onChange={e=>setEditFleetF({...editFleetF,mq:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}/>
+                      <input value={editFleetF.mo??v.mo??""} onChange={e=>setEditFleetF({...editFleetF,mo:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}/>
+                      <input value={editFleetF.le??v.le??""} onChange={e=>setEditFleetF({...editFleetF,le:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}/>
+                      <select value={editFleetF.st??v.st} onChange={e=>setEditFleetF({...editFleetF,st:e.target.value})} style={{...iS,width:"95%",fontSize:10,padding:"3px 5px"}}><option value="ACTIF">ACTIF</option><option value="IMMO">IMMO</option></select>
+                      <span style={{textAlign:"right",display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
+                        <button onClick={saveFleet} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
+                        <button onClick={()=>{setEditFleetIm(null);setEditFleetF({});}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                      </span>
+                    </>:<>
+                      <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:600,color:"#1A1A1A"}}>{v.im}</span>
+                      <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span>
+                      <span style={{color:"#777",fontSize:11}}>{v.mq}</span>
+                      <span style={{color:"#777",fontSize:11}}>{v.mo}</span>
+                      <span style={{color:"#AAA",fontSize:10}}>{v.le}</span>
+                      <span><button onClick={()=>tog(v.im)} style={{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit",background:v.st==="ACTIF"?"#E8F8F0":"#FDECEC",color:v.st==="ACTIF"?"#1E8A52":"#C0392B"}}>{v.st}</button></span>
+                      <span style={{textAlign:"right",display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
+                        {delC===v.im?<><button onClick={()=>del(fTab,fTab==="urban"?urban.indexOf(v):green.indexOf(v),true)} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelC(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></>:user.role!=='lecteur'&&<><button className="dl" onClick={()=>{setEditFleetIm(v.im);setEditFleetF({});}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button><button className="dl" onClick={()=>setDelC(v.im)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Suppr</button></>}
+                      </span>
+                    </>}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
