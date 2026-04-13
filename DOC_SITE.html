@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>OPPORTIX — Documentation complète</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;color:#222;line-height:1.45;font-size:11pt;background:#fff;padding:20px;max-width:900px;margin:0 auto}
+  h1{font-size:22pt;color:#1A1A1A;margin-bottom:4px;border-bottom:3px solid #E8633A;padding-bottom:8px}
+  h2{font-size:15pt;color:#1A1A1A;margin-top:22px;margin-bottom:8px;border-left:4px solid #E8633A;padding-left:10px;page-break-after:avoid}
+  h3{font-size:12pt;color:#333;margin-top:14px;margin-bottom:6px;page-break-after:avoid}
+  h4{font-size:11pt;color:#555;margin-top:10px;margin-bottom:4px}
+  p{margin-bottom:6px}
+  ul,ol{margin-left:22px;margin-bottom:8px}
+  li{margin-bottom:3px}
+  code{background:#F3F3F1;padding:1px 5px;border-radius:3px;font-family:'Consolas',monospace;font-size:10pt;color:#C0392B}
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:700;color:#fff;margin-right:4px}
+  .urban{background:#3A9BD5}.green{background:#2FAA6B}.red{background:#D94F3B}.orange{background:#E8633A}.purple{background:#7B61FF}.yellow{background:#D4A027;color:#fff}.dark{background:#1A1A1A}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt}
+  th,td{border:1px solid #E0E0DE;padding:5px 8px;text-align:left;vertical-align:top}
+  th{background:#F5F5F3;font-weight:700}
+  .note{background:#FDF4E3;border-left:3px solid #D4A027;padding:8px 12px;margin:8px 0;font-size:10pt}
+  .warn{background:#FDECEA;border-left:3px solid #D94F3B;padding:8px 12px;margin:8px 0;font-size:10pt}
+  .ok{background:#D4F0E0;border-left:3px solid #2FAA6B;padding:8px 12px;margin:8px 0;font-size:10pt}
+  .page-break{page-break-before:always}
+  .toc li{list-style:none;margin-bottom:4px}
+  .toc a{color:#1A1A1A;text-decoration:none;border-bottom:1px dotted #CCC}
+  .sub{font-size:10pt;color:#666;margin-bottom:10px}
+  .btn-example{display:inline-block;padding:3px 9px;border-radius:5px;font-size:9pt;font-weight:600;margin:2px}
+  .btn-primary{background:#1A1A1A;color:#fff}
+  .btn-outline{background:#fff;border:1px solid #E0E0DE;color:#666}
+  .flow{background:#F7F7F5;border:1px solid #E5E5E3;border-radius:6px;padding:10px 14px;margin:8px 0;font-size:10pt}
+  .flow strong{color:#E8633A}
+  @media print{body{padding:0}}
+</style>
+</head>
+<body>
+
+<h1>OPPORTIX — Plateforme de gestion de flotte</h1>
+<p class="sub">Documentation complète des fonctionnalités, onglets, boutons et automatismes du site</p>
+
+<h2>Sommaire</h2>
+<ol class="toc">
+  <li><a href="#connexion">1. Connexion & session</a></li>
+  <li><a href="#entete">2. En-tête (bandeau du haut)</a></li>
+  <li><a href="#navigation">3. Navigation & onglets</a></li>
+  <li><a href="#diffusion">4. Onglet Diffusion (tableau de bord)</a></li>
+  <li><a href="#vehicules">5. Onglet Vehicules</a></li>
+  <li><a href="#flotte">6. Onglet Flotte</a></li>
+  <li><a href="#departs">7. Onglet Departs</a></li>
+  <li><a href="#retours">8. Onglet Retours</a></li>
+  <li><a href="#dispo">9. Onglet VH Dispo</a></li>
+  <li><a href="#garage">10. Onglet Garage</a></li>
+  <li><a href="#historique">11. Onglet Historique</a></li>
+  <li><a href="#vacances">12. Onglet Vacances</a></li>
+  <li><a href="#messagerie">13. Onglet Messagerie</a></li>
+  <li><a href="#comptes">14. Onglet Comptes (admin)</a></li>
+  <li><a href="#automatismes">15. Automatismes & liaisons entre onglets</a></li>
+  <li><a href="#roles">16. Rôles & permissions</a></li>
+  <li><a href="#sync">17. Synchronisation temps réel</a></li>
+</ol>
+
+<h2 id="connexion">1. Connexion & session</h2>
+<p>Page d'accueil blanche avec logo <strong>OPPORTIX</strong>. Deux champs :</p>
+<ul>
+  <li><strong>Identifiant</strong> — login utilisateur</li>
+  <li><strong>Mot de passe</strong> — avec bouton <span class="btn-outline btn-example">Voir / Cacher</span> à droite du champ pour afficher/masquer le mot de passe</li>
+</ul>
+<p>Bouton <span class="btn-primary btn-example">Se connecter</span> envoie les identifiants à <code>/api/login</code>. En cas d'échec, un bandeau rouge affiche l'erreur.</p>
+<div class="note">La session (token + utilisateur) est stockée dans <code>localStorage</code> sous la clé <code>net-session</code>. Elle persiste entre les rechargements. Quand le token expire, un toast "Session expirée" s'affiche et l'utilisateur est déconnecté automatiquement.</div>
+
+<h2 id="entete">2. En-tête</h2>
+<p>Visible sur toutes les pages une fois connecté. De gauche à droite :</p>
+<ul>
+  <li><strong>Logo O + OPPORTIX</strong></li>
+  <li><strong>Pastilles de stats</strong> (masquées sur mobile) :
+    <ul>
+      <li><span class="tag dark">X VH</span> — total véhicules</li>
+      <li><span class="tag green">X actifs</span> — véhicules en service</li>
+      <li><span class="tag red">X immo</span> — véhicules immobilisés</li>
+      <li><span class="tag purple">X chauffeurs</span> — chauffeurs actifs</li>
+    </ul>
+  </li>
+  <li><strong>Avatar + nom + rôle</strong> de l'utilisateur connecté</li>
+  <li>Bouton <span class="btn-outline btn-example">Export CSV</span> — exporte la section actuelle en fichier CSV (nom : <code>opportix_SECTION_DATE.csv</code>). Fonctionne pour : departs, retours, garage, dispo, vacances, vehicules.</li>
+  <li>Bouton <span class="btn-outline btn-example">Déconnexion</span> — supprime la session et ramène à l'écran de login</li>
+</ul>
+<p>Une <strong>barre orange</strong> (3px) apparaît en haut de l'écran pendant les sauvegardes en cours.</p>
+
+<h2 id="navigation">3. Navigation & onglets</h2>
+<p>Barre grise juste sous l'en-tête. Onglet actif = fond blanc. Scrollable horizontalement sur mobile.</p>
+<p>Onglets standards : Diffusion · Vehicules · Flotte · Departs · Retours · VH Dispo · Garage · Historique · Vacances · Messagerie.</p>
+<p>Onglet supplémentaire pour les rôles <strong>non-lecteur</strong> : <strong>Comptes</strong>.</p>
+<p>Cliquer sur un onglet : change la vue, ferme tout formulaire d'ajout ouvert, efface la recherche, et pour Historique recharge les données depuis <code>/api/history</code>.</p>
+
+<h2 id="diffusion" class="page-break">4. Onglet Diffusion — Tableau de bord</h2>
+<p>Vue de synthèse divisée en deux zones.</p>
+
+<h3>4.1 Cartes statistiques (haut)</h3>
+<ul>
+  <li><strong>TOTAL VOITURES</strong> (noir) — nombre total</li>
+  <li><strong>URBAN NEO</strong> (bleu) — total + décompte ACTIFS / IMMO</li>
+  <li><strong>GREEN</strong> (vert) — total + décompte ACTIFS / IMMO</li>
+  <li><strong>CHAUFFEURS ACTIFS</strong> (violet)</li>
+</ul>
+
+<h3>4.2 Blocs d'action (grille 2 colonnes)</h3>
+<table>
+  <tr><th>Bloc</th><th>Couleur</th><th>Fonction</th></tr>
+  <tr><td>DEPARTS À PRÉVOIR</td><td>rouge</td><td>Liste des départs à venir. Bouton <strong>+</strong> pour ajouter. Bouton <strong>✓ Confirmer</strong> pour transformer en vrai Départ.</td></tr>
+  <tr><td>RETOURS À PRÉVOIR</td><td>vert</td><td>Retours programmés. Même logique avec bouton Confirmer.</td></tr>
+  <tr><td>VOITURES DISPO</td><td>bleu</td><td>Véhicules disponibles (sans chauffeur).</td></tr>
+  <tr><td>GARAGE URBAN</td><td>jaune</td><td>Véhicules URBAN au garage. Bouton <strong>Sortir</strong> pour remettre en service.</td></tr>
+  <tr><td>GARAGE GREEN</td><td>jaune</td><td>Idem pour la flotte GREEN.</td></tr>
+  <tr><td>VACANCES CHAUFFEURS</td><td>violet</td><td>Chauffeurs en congé.</td></tr>
+</table>
+
+<h3>4.3 Boutons communs dans chaque bloc</h3>
+<ul>
+  <li><span class="btn-outline btn-example">+</span> ouvre un formulaire d'ajout inline</li>
+  <li><span class="btn-outline btn-example">✎</span> (crayon) éditer une ligne</li>
+  <li><span class="btn-outline btn-example">✕</span> supprimer (confirmation requise)</li>
+  <li><span class="btn-outline btn-example">✓</span> confirmer (uniquement Départs/Retours à prévoir) — voir §15</li>
+  <li><span class="btn-outline btn-example">Sortir</span> (garage uniquement) — retire du garage et remet la voiture en circulation</li>
+</ul>
+
+<h3>4.4 Champs des formulaires d'ajout</h3>
+<table>
+  <tr><th>Bloc</th><th>Champs</th></tr>
+  <tr><td>Départs à prévoir</td><td>Societe · Immat · Modele · Leaser · Chauffeur · Date · Note · Commentaire</td></tr>
+  <tr><td>Retours à prévoir</td><td>Societe · Immat · Chauffeur · Date · Note · Commentaire</td></tr>
+  <tr><td>Voitures dispo</td><td>Societe · Immat* · Modele · Note</td></tr>
+  <tr><td>Garage</td><td>Immat* · Garage · Entrée · Sortie</td></tr>
+  <tr><td>Vacances</td><td>Chauffeur* · Societe · Début · Fin</td></tr>
+</table>
+<p class="sub">* = obligatoire à l'enregistrement. Les autres peuvent être vides. Pour la confirmation Départ à prévoir → Départ réel, voir §15.</p>
+
+<h2 id="vehicules" class="page-break">5. Onglet Vehicules</h2>
+<p>Vue comparative des deux flottes côte à côte.</p>
+<ul>
+  <li>Pastilles en haut : nombre total Urban Neo, Green, total général</li>
+  <li>Deux mini-tableaux : <strong>VEHICULES URBAN NEO</strong> (fond bleu) et <strong>VEHICULES GREEN</strong> (fond vert)</li>
+  <li>Colonnes : IMMAT · MARQUE · MODELE · LEASER · STATUT · CHAUFFEUR</li>
+  <li>Pastille rouge "X à l'arrêt" si immobilisations</li>
+</ul>
+<p>Lecture seule dans cet onglet. Pour modifier → Flotte.</p>
+
+<h2 id="flotte">6. Onglet Flotte</h2>
+<p>Gestion détaillée. Deux sous-onglets : <strong>Urban Neo</strong> / <strong>Green</strong>.</p>
+<ul>
+  <li>Barre de recherche (filtre sur immat, marque, modele, chauffeur)</li>
+  <li>Bouton <span class="btn-primary btn-example">+ Ajouter</span> ouvre un formulaire :
+    Immat* · Marque · Modele · Leaser · Chauffeur · Statut (ACTIF/IMMO)</li>
+  <li>Sur chaque ligne : bouton <strong>bascule statut</strong> (ACTIF ↔ IMMO), édition, suppression</li>
+</ul>
+
+<h2 id="departs">7. Onglet Departs</h2>
+<p>Liste triée par date décroissante. Colonnes : SOCIETE · IMMAT · MODELE · LEASER · CHAUFFEUR · DATE · NOTE.</p>
+<p>Formulaire d'ajout : Societe · Immat* · Modele · Leaser · Chauffeur · Date · Note.</p>
+<div class="ok">
+<strong>Automatismes lors de l'ajout d'un départ :</strong>
+<ul>
+  <li>Si la voiture n'existe pas dans la flotte → elle y est <strong>créée automatiquement</strong> (ACTIF)</li>
+  <li>Si la voiture existait → ses champs (modele, leaser, chauffeur) sont <strong>mis à jour</strong></li>
+  <li>Si le chauffeur était en vacances → la <strong>vacance est annulée</strong> automatiquement</li>
+  <li>Si la voiture était en dispo → elle en est <strong>retirée</strong></li>
+</ul>
+</div>
+<p>L'édition du champ <strong>Societe</strong> déplace la voiture entre les flottes Urban ↔ Green.</p>
+<p>Suppression : remet la voiture en IMMO avec chauffeur BUREAU, et l'ajoute à la liste VH Dispo.</p>
+
+<h2 id="retours">8. Onglet Retours</h2>
+<p>Colonnes : SOCIETE · IMMAT · CHAUFFEUR · DATE · NOTE. Formulaire identique à Départs (sans Modele/Leaser).</p>
+<div class="ok">Ajouter un retour <strong>retire la voiture de VH Dispo</strong> automatiquement. Supprimer un retour la <strong>remet en dispo</strong>.</div>
+
+<h2 id="dispo">9. Onglet VH Dispo</h2>
+<p>Voitures sans chauffeur. Colonnes : SOCIETE · IMMAT · MODELE · NOTE.</p>
+<div class="note">Toute voiture en dispo est automatiquement marquée <strong>IMMO</strong> dans la flotte avec chauffeur <strong>BUREAU</strong> (ou <strong>VACANCES</strong> si issue d'une vacance).</div>
+
+<h2 id="garage" class="page-break">10. Onglet Garage</h2>
+<p>Colonnes : SOCIETE · IMMAT · GARAGE · ENTREE · SORTIE · JOURS. Formulaire : Societe · Immat* · Garage · Entrée · Sortie · Jours.</p>
+<div class="ok">
+<strong>Ajouter au garage :</strong>
+<ul>
+  <li>La voiture passe en <strong>IMMO</strong> dans la flotte avec chauffeur = nom du garage</li>
+  <li>Si elle était en dispo, elle est retirée</li>
+  <li>Si la société choisie diffère de sa flotte actuelle, la voiture est <strong>déplacée</strong> Urban ↔ Green</li>
+</ul>
+<strong>Bouton Sortir :</strong> retire du garage, ajoute la voiture en VH Dispo, garde IMMO dans la flotte.
+</div>
+
+<h2 id="historique">11. Onglet Historique</h2>
+<p>Barre de recherche par immatriculation. Pour chaque voiture trouvée : historique chronologique des événements étiquetés :</p>
+<ul>
+  <li><span class="tag dark">VH ACTUEL</span> — état courant</li>
+  <li><span class="tag red">DEPART</span> — événement de départ</li>
+  <li><span class="tag green">RETOUR</span> — événement de retour</li>
+</ul>
+<p>Données rechargées via <code>/api/history</code> à chaque ouverture de l'onglet.</p>
+
+<h2 id="vacances">12. Onglet Vacances chauffeurs</h2>
+<p>Colonnes : CHAUFFEUR · SOCIETE · DEBUT · FIN · NOTE. Formulaire : Chauffeur* · Societe · Début · Fin · Note.</p>
+<div class="ok">
+<strong>Ajouter une vacance :</strong>
+<ul>
+  <li>Recherche la voiture du chauffeur dans les deux flottes</li>
+  <li>La voiture passe en <strong>IMMO</strong> avec chauffeur = <strong>VACANCES</strong></li>
+  <li>Elle est ajoutée à <strong>VH Dispo</strong> avec note "VACANCES JJ/MM-JJ/MM"</li>
+  <li>Si une <strong>Societe</strong> est choisie et diffère de la flotte actuelle → la voiture est <strong>déplacée</strong> Urban ↔ Green</li>
+</ul>
+<strong>Supprimer une vacance :</strong> libère le chauffeur (la voiture reste en dispo sauf si on la retire manuellement). La voiture repasse à chauffeur BUREAU dans la flotte. <strong>La voiture n'est PAS auto-réaffectée à son ancien chauffeur.</strong>
+</div>
+
+<h2 id="messagerie">13. Onglet Messagerie</h2>
+<p>Chat entre utilisateurs des différents pôles (<strong>Activité</strong>, <strong>Parc</strong>, <strong>Commercial</strong>).</p>
+<ul>
+  <li>Sélecteur de destinataire : <strong>all</strong> (diffusion globale) ou un pôle spécifique</li>
+  <li>Zone de saisie + bouton envoyer</li>
+  <li>Chaque message affiche : expéditeur · pôle (couleur) · horodatage · contenu</li>
+  <li>Défilement auto vers le bas à chaque nouveau message</li>
+</ul>
+
+<h2 id="comptes">14. Onglet Comptes (non-lecteurs uniquement)</h2>
+<p>Gestion des utilisateurs :</p>
+<ul>
+  <li>Liste des comptes existants avec rôle et pôle</li>
+  <li>Création / édition / suppression (selon permissions serveur)</li>
+  <li>Champs : identifiant · nom affiché · mot de passe · rôle · pôle</li>
+</ul>
+
+<h2 id="automatismes" class="page-break">15. Automatismes & liaisons entre onglets</h2>
+<p>Le site maintient une cohérence automatique entre les données. Les actions dans un onglet affectent souvent d'autres onglets.</p>
+
+<h3>15.1 Ajout d'un Départ</h3>
+<div class="flow">
+Départ créé → <strong>Flotte</strong> : voiture créée si absente, sinon mise à jour (modele/leaser/chauffeur) → <strong>Vacances</strong> : vacance du chauffeur supprimée si existe → <strong>VH Dispo</strong> : voiture retirée si présente.
+</div>
+
+<h3>15.2 Ajout d'un Retour</h3>
+<div class="flow">Retour créé → <strong>VH Dispo</strong> : voiture retirée.</div>
+
+<h3>15.3 Suppression d'un Départ</h3>
+<div class="flow">Départ supprimé → <strong>Flotte</strong> : voiture passe IMMO + chauffeur BUREAU → <strong>VH Dispo</strong> : voiture ajoutée.</div>
+
+<h3>15.4 Ajout d'une ligne VH Dispo</h3>
+<div class="flow">Dispo ajouté → <strong>Flotte</strong> : voiture passe IMMO + chauffeur BUREAU (créée si absente).</div>
+
+<h3>15.5 Ajout au Garage</h3>
+<div class="flow">Garage ajouté → <strong>Flotte</strong> : voiture IMMO + chauffeur = nom du garage (déplacée si société ≠) → <strong>VH Dispo</strong> : retirée.</div>
+
+<h3>15.6 Sortie du Garage</h3>
+<div class="flow">Ligne garage supprimée (bouton Sortir ou ✕) → <strong>VH Dispo</strong> : voiture ajoutée, reste IMMO dans la flotte.</div>
+
+<h3>15.7 Ajout d'une Vacance</h3>
+<div class="flow">Vacance créée → <strong>Flotte</strong> : voiture du chauffeur passe IMMO + chauffeur = VACANCES (déplacée entre Urban/Green si société choisie différente) → <strong>VH Dispo</strong> : voiture ajoutée avec note VACANCES.</div>
+
+<h3>15.8 Suppression d'une Vacance</h3>
+<div class="flow">Vacance supprimée → <strong>Flotte</strong> : chauffeur remis à BUREAU → <strong>VH Dispo</strong> : ligne VACANCES de ce chauffeur retirée. (Voiture NON réaffectée auto.)</div>
+
+<h3>15.9 Confirmer un Départ à prévoir</h3>
+<p>Bouton <span class="btn-outline btn-example">✓</span> sur la ligne. Transforme un "à prévoir" en vrai Départ.</p>
+<div class="warn"><strong>Champs obligatoires à la confirmation :</strong> Societe · Immat · Modele · Leaser · Chauffeur · Date · Note. Sinon un toast rouge liste les champs manquants.</div>
+<p>Note + Commentaire sont fusionnés en une seule Note séparée par <code> | </code> dans le Départ final. La ligne disparaît de "À prévoir" et apparaît dans Departs, déclenchant tous les automatismes §15.1.</p>
+
+<h3>15.10 Confirmer un Retour à prévoir</h3>
+<p>Mêmes règles : obligatoires = Societe · Immat · Chauffeur · Date · Note. Déclenche §15.2.</p>
+
+<h3>15.11 Enregistrer un Départ/Retour à prévoir (ajout simple)</h3>
+<p>Aucun champ obligatoire à l'ajout. Tu peux créer une ligne quasiment vide. La validation stricte ne s'applique qu'à la confirmation.</p>
+
+<h2 id="roles">16. Rôles & permissions</h2>
+<table>
+  <tr><th>Rôle</th><th>Accès</th></tr>
+  <tr><td><strong>admin</strong></td><td>Tout + onglet Comptes + gestion utilisateurs</td></tr>
+  <tr><td><strong>editeur</strong></td><td>Tout sauf gestion fine des comptes</td></tr>
+  <tr><td><strong>lecteur</strong></td><td>Consultation seule, pas d'onglet Comptes, pas de boutons d'ajout/édition/suppression</td></tr>
+</table>
+<p>Le pôle (Activité/Parc/Commercial) colore les messages et filtre certaines vues de la messagerie.</p>
+
+<h2 id="sync">17. Synchronisation temps réel</h2>
+<ul>
+  <li><strong>WebSocket</strong> (socket.io) : chaque sauvegarde d'un utilisateur émet <code>data-changed</code>, tous les autres clients rechargent automatiquement.</li>
+  <li><strong>Polling de secours</strong> : toutes les 15 secondes, rechargement forcé depuis <code>/api/data</code>.</li>
+  <li><strong>Barre orange</strong> en haut de l'écran pendant les sauvegardes.</li>
+  <li><strong>Toasts</strong> : confirmations (vert) ou erreurs (rouge) en bas à droite.</li>
+  <li><strong>Auto-réparation</strong> au chargement : si un Départ référence une immat absente de la flotte, la voiture est créée automatiquement ; les champs manquants (modele, leaser) sont complétés depuis le Départ.</li>
+</ul>
+
+<p style="margin-top:30px;padding-top:10px;border-top:1px solid #E0E0DE;font-size:9pt;color:#999;text-align:center">Documentation OPPORTIX — générée automatiquement</p>
+
+</body>
+</html>

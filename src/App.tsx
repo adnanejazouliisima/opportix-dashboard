@@ -327,19 +327,31 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,[k]:n,di:nd,...extra});
     }else if(type==="vacs"&&entry.ch){
-      // Vacances → trouver la voiture du chauffeur et la mettre en dispo
+      // Vacances → trouver la voiture du chauffeur, la déplacer dans la flotte choisie, la mettre en dispo
       const chName=entry.ch.toUpperCase().trim();
-      const veh=[...urban,...green].find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
+      const inUrban=urban.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
+      const inGreen=green.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
+      const veh=inUrban||inGreen;
       if(veh){
         const im=veh.im;
+        const vehUpd={...veh,st:"IMMO",ch:"VACANCES"};
+        let nu=urban, ng=green;
+        if(entry.soc==="GREEN"){
+          nu=urban.filter((v:any)=>v.im!==im);
+          ng=inGreen?green.map((v:any)=>v.im===im?vehUpd:v):[...green,vehUpd];
+        }else if(entry.soc==="URBAN NEO"){
+          ng=green.filter((v:any)=>v.im!==im);
+          nu=inUrban?urban.map((v:any)=>v.im===im?vehUpd:v):[...urban,vehUpd];
+        }else{
+          nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
+          ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
+        }
         const isInDisp=disp.find((d:any)=>d.im===im);
-        if(!isInDisp){
-          const nd=[...disp,{im,soc:entry.soc||veh.soc||"",mo:veh.mo||"",ch:chName,no:`VACANCES ${entry.deb||""}-${entry.fin||""}`.trim(),id:uid()}];
-          const nu=urban.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
-          const ng=green.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);
-          setUrban(nu);setGreen(ng);setDisp(nd);
-          sv({u:nu,g:ng,[k]:n,di:nd,...extra});
-        }else{sv({[k]:n,...extra});}
+        const nd=isInDisp
+          ?disp
+          :[...disp,{im,soc:entry.soc||veh.soc||"",mo:veh.mo||"",ch:chName,no:`VACANCES ${entry.deb||""}-${entry.fin||""}`.trim(),id:uid()}];
+        setUrban(nu);setGreen(ng);setDisp(nd);
+        sv({u:nu,g:ng,[k]:n,di:nd,...extra});
       }else{sv({[k]:n,...extra});}
     }else{
       sv({[k]:n,...extra});
@@ -439,7 +451,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const k=type==="dpvs"?"dpv":"rpv";
     const item=arr.find((d:any)=>d.id===id);
     if(!item){return;}
-    if(!item.im?.trim()){setToast({msg:"Immatriculation obligatoire pour confirmer",type:"err"});return;}
+    const required=type==="dpvs"
+      ?[["soc","Societe"],["im","Immat"],["mo","Modele"],["le","Leaser"],["ch","Chauffeur"],["dt","Date"],["no","Note"]]
+      :[["soc","Societe"],["im","Immat"],["ch","Chauffeur"],["dt","Date"],["no","Note"]];
+    const missing=required.filter(([f])=>!item[f]?.toString().trim()).map(([,l])=>l);
+    if(missing.length){setToast({msg:`Champs manquants : ${missing.join(", ")}`,type:"err"});return;}
     // Concatene la note et le commentaire (le champ "co" n'existe pas dans deps/rets)
     const noteCombined=[item.no,item.co].filter(Boolean).join(" | ");
     const target={soc:item.soc||"URBAN NEO",im:item.im.toUpperCase().trim(),mo:item.mo||"",le:item.le||"",ch:item.ch||"",dt:item.dt||"",no:noteCombined};
@@ -592,18 +608,18 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 user={user}
               />
               <DiffBlock title="GARAGE URBAN" titleBg="#FDF4E3" color="#D4A027" count={`${garage.filter((g:any)=>g.soc==="URBAN NEO").length} VH`}
-                heads={["IMMAT","GARAGE","ENTREE","SORTIE"]} cols="90px 1fr 60px 60px" data={garage.filter((g:any)=>g.soc==="URBAN NEO")} maxH={160}
-                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
-                formFields={[["im","Immat *","XX-000-XX"],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
+                heads={["IMMAT","MODELE","GARAGE","ENTREE","SORTIE"]} cols="85px 70px 1fr 55px 55px" data={garage.filter((g:any)=>g.soc==="URBAN NEO")} maxH={160}
+                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:10}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
+                formFields={[["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"URBAN NEO",im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("garage",id)}
                 onExit={(id:any)=>del("garage",id)}
                 user={user}
               />
               <DiffBlock title="GARAGE GREEN" titleBg="#FDF4E3" color="#D4A027" count={`${garage.filter((g:any)=>g.soc==="GREEN").length} VH`}
-                heads={["IMMAT","GARAGE","ENTREE","SORTIE"]} cols="90px 1fr 60px 60px" data={garage.filter((g:any)=>g.soc==="GREEN")} maxH={160}
-                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
-                formFields={[["im","Immat *","XX-000-XX"],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
+                heads={["IMMAT","MODELE","GARAGE","ENTREE","SORTIE"]} cols="85px 70px 1fr 55px 55px" data={garage.filter((g:any)=>g.soc==="GREEN")} maxH={160}
+                renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:10}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
+                formFields={[["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["gar","Garage","Nom"],["de","Entree","JJ/MM"],["ds","Sortie","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("garage",{...f,soc:"GREEN",im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("garage",id)}
                 onExit={(id:any)=>del("garage",id)}
@@ -697,10 +713,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="garage"&&<CrudP title="Garage" color="#D4A027" data={garage} type="garage" showAdd={showAdd} setShowAdd={setShowAdd}
-          fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Garage","gar","Nom"],["Entree","de","JJ/MM"],["Sortie","ds","JJ/MM"],["Jours","ji","0"]]}
+          fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Garage","gar","Nom"],["Entree","de","JJ/MM"],["Sortie","ds","JJ/MM"],["Jours","ji","0"]]}
           form={form} setForm={setForm} addItem={add} delItem={del} exitItem={(t:string,id:any)=>del(t,id)} user={user}
-          cols="80px 100px 1fr 70px 70px 50px 110px" heads={["SOCIETE","IMMAT","GARAGE","ENTREE","SORTIE","JOURS",""]}
-          rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
+          cols="80px 100px 90px 1fr 70px 70px 50px 110px" heads={["SOCIETE","IMMAT","MODELE","GARAGE","ENTREE","SORTIE","JOURS",""]}
+          rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:11}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
         />}
         {tab==="historique"&&(
           <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
