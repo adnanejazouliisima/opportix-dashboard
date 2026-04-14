@@ -368,7 +368,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           <div><div style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/>
+          <Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs actifs`}/>
           <div style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
