@@ -536,7 +536,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           <div><div className="logo-text" style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <span className="header-pills" style={{display:"flex",gap:6}}><Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#C0392B" t={`${nUI+nGI} immo`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/></span>
+          <span className="header-pills" style={{display:"flex",gap:6}}><Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/></span>
           <div className="hide-mobile" style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div className="user-avatar" style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
@@ -565,7 +565,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 {l:"GREEN",v:green.length,c:"#2FAA6B",a:nGA,
                   dispo:green.filter(v=>disp.find((d:any)=>d.im===v.im)).length,
                   gar:green.filter(v=>garage.find((g:any)=>g.im===v.im)).length},
-                {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF"},
+                {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF",immo:nUI+nGI},
               ].map((k:any,i:number)=>(
                 <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
                   <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,marginBottom:4}}>{k.l}</div>
@@ -576,6 +576,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                         <div style={{fontSize:15,fontWeight:800,color:"#1E8A52"}}>{k.a} ACTIF{k.a>1?"S":""}</div>
                         <div style={{fontSize:13,fontWeight:800,color:"#3A9BD5"}}>{k.dispo} DISPO</div>
                         <div style={{fontSize:13,fontWeight:800,color:"#C0392B"}}>{k.gar} GARAGE</div>
+                      </div>
+                    </div>
+                  ):k.immo!==undefined?(
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <div className="stat-value" style={{fontSize:32,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:2,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1.1}}>
+                        <div style={{fontSize:15,fontWeight:800,color:"#C0392B"}}>{k.immo} IMMO</div>
                       </div>
                     </div>
                   ):(
