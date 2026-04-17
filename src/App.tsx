@@ -59,6 +59,23 @@ const POLES={activite:{n:"Activite",c:"#E8633A"},parc:{n:"Parc",c:"#3A9BD5"},com
 const API_URL = "";
 const uid=()=>crypto.randomUUID();
 
+function getISOWeekLabel(date=new Date()){
+  const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
+  const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo=Math.ceil((((+d- +yearStart)/86400000)+1)/7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+}
+function weekDateRange(weekLabel:string){
+  const[y,w]=weekLabel.split('-W').map(Number);
+  const jan4=new Date(Date.UTC(y,0,4));
+  const monday=new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate()-(jan4.getUTCDay()||7)+1+(w-1)*7);
+  const sunday=new Date(monday);sunday.setUTCDate(monday.getUTCDate()+6);
+  const fmt=(d:Date)=>`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+  return{from:fmt(monday),to:fmt(sunday)};
+}
+
 interface AppUser {
   id: string;
   username: string;
@@ -225,7 +242,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
   const refreshSnapshots=async()=>{
     const r=await fetch('/api/snapshots',{headers:{"Authorization":`Bearer ${userToken}`}});
-    if(r.ok) setSnapshots(await r.json());
+    if(r.ok){setSnapshots(await r.json());}
   };
 
   const sv=async(o:any={})=>{
@@ -591,20 +608,25 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       </nav>
 
       {/* ═══ WEEK SELECTOR BAR ═══ */}
-      {snapshots.length>0&&(
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 20px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:11,flexWrap:"wrap"}}>
+      {(()=>{
+        const currentWeek=getISOWeekLabel();
+        const currentRange=weekDateRange(currentWeek);
+        const displayWeek=viewWeek||currentWeek;
+        const displayRange=isHistorical&&snapshotData?{from:snapshotData.from,to:snapshotData.to}:(viewWeek?weekDateRange(viewWeek):currentRange);
+        const displayNum=displayWeek.split('-W')[1];
+        const canGoPrev=snapshots.length>0&&(isHistorical?snapshots.findIndex(s=>s.weekLabel===viewWeek)<snapshots.length-1:true);
+        const canGoNext=isHistorical&&viewWeek!==currentWeek;
+        return(
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 20px",background:isHistorical?"#FFF8F0":"#FAFAF8",borderBottom:`1px solid ${isHistorical?"#F5D9A8":"#E5E5E3"}`,fontSize:11,flexWrap:"wrap"}}>
           <span style={{fontWeight:700,color:"#888",fontSize:9,letterSpacing:.5}}>SEMAINE</span>
-          <button onClick={()=>{const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);const prev=snapshots[idx+1]||snapshots[snapshots.length-1];if(prev)loadWeek(prev.weekLabel);}} disabled={!viewWeek&&snapshots.length<=1} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>&#9664;</button>
-          <span style={{fontWeight:600,color:isHistorical?"#E8633A":"#1A1A1A",minWidth:200,textAlign:"center",fontSize:11}}>
-            {isHistorical?`Sem. ${viewWeek} — ${snapshotData?.from||""} au ${snapshotData?.to||""}`:"En direct"}
+          <button onClick={()=>{if(!isHistorical){const oldest=snapshots[snapshots.length-1];if(oldest&&oldest.weekLabel!==currentWeek)loadWeek(oldest.weekLabel);else if(snapshots.length>1)loadWeek(snapshots[1].weekLabel);return;}const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);const prev=snapshots[idx+1];if(prev)loadWeek(prev.weekLabel);}} disabled={!canGoPrev} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:canGoPrev?"#555":"#CCC",fontSize:11,cursor:canGoPrev?"pointer":"default",fontFamily:"inherit"}}>&#9664;</button>
+          <span style={{fontWeight:600,color:isHistorical?"#E8633A":"#1A1A1A",minWidth:220,textAlign:"center",fontSize:11}}>
+            Sem. {displayNum} — {displayRange.from} au {displayRange.to}{!isHistorical?" (en direct)":""}
           </span>
-          <button onClick={()=>{if(!viewWeek)return;const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);if(idx<=0)loadWeek(null);else loadWeek(snapshots[idx-1].weekLabel);}} disabled={!isHistorical} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:"#555",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>&#9654;</button>
-          <button onClick={()=>loadWeek(null)} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:`1px solid ${isHistorical?"#2FAA6B":"#E0E0DE"}`,background:isHistorical?"#fff":"#2FAA6B",color:isHistorical?"#2FAA6B":"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>&#9679; En direct</button>
-          {user.role!=="lecteur"&&(
-            <button onClick={async()=>{await fetch('/api/snapshots',{method:'POST',headers});await refreshSnapshots();setToast({msg:"Snapshot sauvegarde",type:"ok"});}} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Sauvegarder cette semaine</button>
-          )}
-        </div>
-      )}
+          <button onClick={()=>{if(!isHistorical)return;const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);if(idx<=0||snapshots[idx-1].weekLabel===currentWeek)loadWeek(null);else loadWeek(snapshots[idx-1].weekLabel);}} disabled={!canGoNext} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:canGoNext?"#555":"#CCC",fontSize:11,cursor:canGoNext?"pointer":"default",fontFamily:"inherit"}}>&#9654;</button>
+          {isHistorical&&<button onClick={()=>loadWeek(null)} style={{marginLeft:4,padding:"3px 10px",borderRadius:5,border:"1px solid #2FAA6B",background:"#fff",color:"#2FAA6B",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>&#9679; Retour en direct</button>}
+        </div>);
+      })()}
 
       {isHistorical&&<div style={{padding:"6px 20px",background:"#FFF3E0",borderBottom:"1px solid #F5D9A8",fontSize:11,fontWeight:600,color:"#E8633A",textAlign:"center"}}>Vous consultez les donnees de la semaine {viewWeek} — mode lecture seule</div>}
 

@@ -239,6 +239,8 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
   }
   await db.collection('data').updateOne({ _key: 'fleet' }, { $set: d }, { upsert: true });
   await audit(req.user, 'data_update', { keys: Object.keys(d) });
+  // Auto-update current week's snapshot on every save
+  takeSnapshot(req.user.username).catch(() => {});
   broadcast();
   res.json({ ok: true });
 });
@@ -253,6 +255,7 @@ app.post('/api/data/message', auth, async (req, res) => {
     { $push: { msgs: { ...req.body, id: crypto.randomUUID() } } },
     { upsert: true }
   );
+  takeSnapshot(req.user.username).catch(() => {});
   broadcast();
   res.json({ ok: true });
 });
