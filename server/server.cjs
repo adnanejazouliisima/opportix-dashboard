@@ -73,6 +73,7 @@ async function connectDB() {
   await db.collection('data').createIndex({ _key: 1 });
   await db.collection('audit').createIndex({ ts: -1 });
   await db.collection('archive').createIndex({ deletedAt: -1 });
+  await db.collection('snapshots').createIndex({ weekLabel: 1 }, { unique: true });
 
   await seedIfEmpty();
   await runMigrations();
@@ -121,6 +122,38 @@ async function audit(user, action, details) {
       details,
     });
   } catch (e) { /* don't break the app if audit fails */ }
+}
+
+/* ═══ WEEKLY SNAPSHOTS ═══ */
+function getISOWeekLabel(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function getWeekDateRange(weekLabel) {
+  const [y, w] = weekLabel.split('-W').map(Number);
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4.getUTCDay() || 7) + 1 + (w - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmt = d => `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+  return { from: fmt(monday), to: fmt(sunday) };
+}
+
+async function takeSnapshot(triggeredBy = 'auto') {
+  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  if (!doc) return null;
+  const { _id, _key, ...data } = doc;
+  const weekLabel = getISOWeekLabel();
+  const range = getWeekDateRange(weekLabel);
+  const snapshot = { weekLabel, ...range, createdAt: new Date(), createdBy: triggeredBy, ...data };
+  await db.collection('snapshots').replaceOne({ weekLabel }, snapshot, { upsert: true });
+  await audit({ username: triggeredBy }, 'snapshot_created', { weekLabel });
+  return weekLabel;
 }
 
 /* ═══ AUTH MIDDLEWARE ═══ */
@@ -279,7 +312,13 @@ app.get('/api/history', auth, async (req, res) => {
 
 /* ═══ CSV EXPORT ═══ */
 app.get('/api/export/csv', auth, async (req, res) => {
-  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  let doc;
+  if (req.query.week) {
+    doc = await db.collection('snapshots').findOne({ weekLabel: req.query.week });
+    if (!doc) return res.status(404).json({ error: 'Snapshot non trouve pour cette semaine' });
+  } else {
+    doc = await db.collection('data').findOne({ _key: 'fleet' });
+  }
   if (!doc) return res.status(404).json({ error: 'Aucune donnee' });
 
   const section = req.query.section || 'vehicles';
@@ -309,10 +348,34 @@ app.get('/api/export/csv', auth, async (req, res) => {
     (doc.pr || []).forEach(p => csv += `${p.nom};${p.ct||''};${p.bs||''};${p.stu||''};${p.no||''}\n`);
   }
 
-  await audit(req.user, 'csv_export', { section });
+  await audit(req.user, 'csv_export', { section, week: req.query.week || 'live' });
+  const suffix = req.query.week || new Date().toISOString().slice(0,10);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename=opportix_${section}_${new Date().toISOString().slice(0,10)}.csv`);
+  res.setHeader('Content-Disposition', `attachment; filename=opportix_${section}_${suffix}.csv`);
   res.send('\uFEFF' + csv); // BOM for Excel compatibility
+});
+
+/* ═══ SNAPSHOT ROUTES ═══ */
+app.post('/api/snapshots', auth, canEdit, async (req, res) => {
+  const weekLabel = await takeSnapshot(req.user.username);
+  broadcast();
+  res.json({ ok: true, weekLabel });
+});
+
+app.get('/api/snapshots', auth, async (req, res) => {
+  const list = await db.collection('snapshots')
+    .find({}, { projection: { u: 0, g: 0, dep: 0, ret: 0, ga: 0, di: 0, va: 0, pr: 0, dpv: 0, rpv: 0, msgs: 0 } })
+    .sort({ weekLabel: -1 })
+    .limit(104)
+    .toArray();
+  res.json(list);
+});
+
+app.get('/api/snapshots/:week', auth, async (req, res) => {
+  const doc = await db.collection('snapshots').findOne({ weekLabel: req.params.week });
+  if (!doc) return res.status(404).json({ error: 'Snapshot non trouve' });
+  const { _id, ...rest } = doc;
+  res.json(rest);
 });
 
 /* ═══ AUDIT ROUTE ═══ */
@@ -422,6 +485,30 @@ async function startServer() {
     });
     console.log(`\n  Comptes par defaut:`);
     console.log(`  → (username) / opportix2025\n`);
+
+    // Auto-snapshot: ensure current week exists, then schedule weekly
+    (async () => {
+      const currentWeek = getISOWeekLabel();
+      const exists = await db.collection('snapshots').findOne({ weekLabel: currentWeek });
+      if (!exists) {
+        await takeSnapshot('auto');
+        console.log(`  📸 Snapshot auto cree: ${currentWeek}`);
+      }
+      // Schedule next Monday 02:00
+      const now = new Date();
+      const next = new Date(now);
+      next.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7 || 7));
+      next.setHours(2, 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 7);
+      const delay = next - now;
+      setTimeout(() => {
+        takeSnapshot('auto').then(() => console.log('  📸 Auto-snapshot hebdo'));
+        setInterval(() => {
+          takeSnapshot('auto').then(() => console.log('  📸 Auto-snapshot hebdo'));
+        }, 7 * 24 * 60 * 60 * 1000);
+      }, delay);
+      console.log(`  ⏰ Prochain snapshot: ${next.toISOString()}`);
+    })();
   });
 
   server.on('error', (err) => {
