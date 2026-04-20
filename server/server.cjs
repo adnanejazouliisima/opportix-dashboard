@@ -381,6 +381,47 @@ app.get('/api/snapshots/:week', auth, async (req, res) => {
   res.json(rest);
 });
 
+// Monthly KPI CSV: one row per month, based on last snapshot of each month
+app.get('/api/export/csv/monthly', auth, async (req, res) => {
+  const all = await db.collection('snapshots').find().sort({ createdAt: 1 }).toArray();
+  // Group by YYYY-MM, keep latest snapshot per month
+  const byMonth = new Map();
+  for (const s of all) {
+    const d = new Date(s.createdAt);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+    const prev = byMonth.get(key);
+    if (!prev || new Date(prev.createdAt) < d) byMonth.set(key, s);
+  }
+
+  let csv = 'Mois;Total VH;Urban Neo Total;Urban Actifs;Urban Immo;Green Total;Green Actifs;Green Immo;Chauffeurs Actifs;En Garage;En Dispo;Vacances;Departs (mois);Retours (mois)\n';
+  const monthInDt = (dt, monthKey) => {
+    if (!dt) return false;
+    const [, mm] = monthKey.split('-');
+    const parts = dt.split('/');
+    return parts.length >= 2 && String(parseInt(parts[1])).padStart(2,'0') === mm;
+  };
+
+  for (const [month, s] of [...byMonth.entries()].sort()) {
+    const u = s.u || [], g = s.g || [];
+    const uA = u.filter(v => v.st === 'ACTIF').length;
+    const uI = u.filter(v => v.st === 'IMMO').length;
+    const gA = g.filter(v => v.st === 'ACTIF').length;
+    const gI = g.filter(v => v.st === 'IMMO').length;
+    const nCh = [...u, ...g].filter(v => v.st === 'ACTIF').length;
+    const gar = (s.ga || []).length;
+    const dis = (s.di || []).length;
+    const vac = (s.va || []).length;
+    const deps = (s.dep || []).filter(d => monthInDt(d.dt, month)).length;
+    const rets = (s.ret || []).filter(d => monthInDt(d.dt, month)).length;
+    csv += `${month};${u.length + g.length};${u.length};${uA};${uI};${g.length};${gA};${gI};${nCh};${gar};${dis};${vac};${deps};${rets}\n`;
+  }
+
+  await audit(req.user, 'csv_export_monthly', { months: byMonth.size });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename=opportix_mensuel_${new Date().toISOString().slice(0,10)}.csv`);
+  res.send('\uFEFF' + csv);
+});
+
 /* ═══ AUDIT ROUTE ═══ */
 app.get('/api/audit', auth, adminOnly, async (req, res) => {
   const logs = await db.collection('audit').find().sort({ ts: -1 }).limit(200).toArray();
