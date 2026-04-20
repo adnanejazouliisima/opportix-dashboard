@@ -43,8 +43,8 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
               <div key={k} style={{flex:"1 1 80px",minWidth:70}}>
                 <div style={{fontSize:9,fontWeight:600,color:"#888",marginBottom:2}}>{l}</div>
                 {opts
-                  ?<select value={f[k]||opts[0]} onChange={e=>setF({...f,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-                  :<input value={f[k]||""} onChange={e=>setF({...f,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}/>
+                  ?<select value={f[k]||opts[0]} onChange={e=>setF({...f,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&doAdd()} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+                  :<input value={f[k]||""} onChange={e=>setF({...f,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder={p} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}/>
                 }
               </div>
             ))}
@@ -63,8 +63,8 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
               <div key={k} style={{flex:"1 1 80px",minWidth:70}}>
                 <div style={{fontSize:9,fontWeight:600,color:"#888",marginBottom:2}}>{l}</div>
                 {opts
-                  ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-                  :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}/>
+                  ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&saveEdit()} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+                  :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&saveEdit()} placeholder={p} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}/>
                 }
               </div>
             ))}<button onClick={saveEdit} style={{padding:"5px 12px",borderRadius:5,border:"none",background:"#1E8A52",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit",height:28}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"5px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit",height:28}}>Annuler</button></div>
@@ -103,6 +103,7 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
   const initDefaults=()=>{const o:any={};fields.forEach(([,k,,opts]:any)=>{if(opts)o[k]=opts[0];});return o;};
   const startEdit=(d:any)=>{const o:any={};fields.forEach(([,k]:any)=>{o[k]=d[k]||"";});setEditF(o);setEditId(d.id);};
   const saveEdit=()=>{if(editItem)editItem(type,editId,editF);setEditId(null);setEditF({});};
+  const doAdd=()=>{const req=type==="vacs"?form.ch:type==="pros"?form.nom:type==="users"?form.username:form.im;if(!req?.trim()){setFormErr("Veuillez remplir les champs obligatoires (*)");return;}setFormErr("");addItem(type,{...form,im:form.im?.toUpperCase().trim()});};
   return <div className="ani">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
       <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A"}}>{title} <span style={{fontSize:11,color:"#BBB",fontWeight:400}}>{data.length}</span></div>
@@ -111,20 +112,20 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
     {open&&<div className="ani" style={{background:"#fff",borderRadius:8,padding:14,border:"1px solid #E5E5E3",marginBottom:10}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8}}>
         {fields.map(([l,k,p,opts]:any)=><div key={k}><div style={{fontSize:10,fontWeight:600,color:"#888",marginBottom:3}}>{l}</div>
-          {opts?<select value={form[k]||opts[0]} onChange={(e:React.ChangeEvent<HTMLSelectElement>)=>setForm({...form,[k]:e.target.value})} style={{...iS,width:"100%",background:"#FAFAF8"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-          :<input value={form[k]||""} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{setForm({...form,[k]:e.target.value});setFormErr("");}} placeholder={p} style={{...iS,width:"100%",background:"#FAFAF8"}}/>}
+          {opts?<select value={form[k]||opts[0]} onChange={(e:React.ChangeEvent<HTMLSelectElement>)=>setForm({...form,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&doAdd()} style={{...iS,width:"100%",background:"#FAFAF8"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+          :<input value={form[k]||""} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{setForm({...form,[k]:e.target.value});setFormErr("");}} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder={p} style={{...iS,width:"100%",background:"#FAFAF8"}}/>}
         </div>)}
       </div>
       {formErr&&<div style={{fontSize:11,color:"#C0392B",marginTop:6}}>{formErr}</div>}
-      <button onClick={()=>{const req=type==="vacs"?form.ch:type==="pros"?form.nom:type==="users"?form.username:form.im;if(!req?.trim()){setFormErr("Veuillez remplir les champs obligatoires (*)");return;}setFormErr("");addItem(type,{...form,im:form.im?.toUpperCase().trim()});}} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
+      <button onClick={doAdd} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
     </div>}
     <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
       <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>{heads.map((h:string,i:number)=><span key={i}>{h}</span>)}</div>
       <div style={{maxHeight:420,overflowY:"auto"}}>
         {data.map((d:any,i:number)=><div key={useIdx?i:d.id} className="rw" style={{display:"grid",gridTemplateColumns:cols,padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
           {editId===d.id?<>{fields.map(([l,k,p,opts]:any)=><span key={k}>{opts
-            ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-            :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p||l} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}/>
+            ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&saveEdit()} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+            :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&saveEdit()} placeholder={p||l} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}/>
           }</span>)}<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}><button onClick={saveEdit} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>X</button></span></>
           :<>{rr(d)}
           {user.role!=='lecteur'&&<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>{delConfirm===(useIdx?i:d.id)?<span style={{display:"inline-flex",gap:2}}><button onClick={()=>{delItem(type,useIdx?i:d.id,useIdx);setDelConfirm(null);}} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelConfirm(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></span>:<>{exitItem&&<button title="Sortir du garage → mettre en dispo" onClick={()=>exitItem(type,useIdx?i:d.id,useIdx)} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E8633A",background:"#FFF1EB",color:"#E8633A",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Sortir</button>}{editItem&&<button className="dl" onClick={()=>startEdit(d)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button>}<button className="dl" onClick={()=>setDelConfirm(useIdx?i:d.id)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Retirer</button></>}</span>}</>}
