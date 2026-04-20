@@ -714,6 +714,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["no","Note","..."]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("disp",{...f,im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("disp",id)}
+                onEdit={(id:any,updated:any)=>edit("disp",id,updated)}
                 user={displayUser}
               />
               <DiffBlock title="GARAGE URBAN" titleBg="#FDF4E3" color="#D4A027" count={`${dGarage.filter((g:any)=>g.soc==="URBAN NEO").length} VH`}
@@ -742,6 +743,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
+                onEdit={(id:any,updated:any)=>edit("vacs",id,updated)}
                 user={displayUser}
               />
             </div>
@@ -841,13 +843,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         />}
         {tab==="retours"&&<CrudP title="Retours" color="#2FAA6B" data={dRets} type="rets" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
           cols="80px 100px 1fr 80px 1fr 60px" heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#777",fontSize:11}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="dispo"&&<CrudP title="Vehicules disponibles" color="#3A9BD5" data={dDisp} type="disp" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
           cols="80px 100px 1fr 1fr 60px" heads={["SOCIETE","IMMAT","MODELE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
@@ -891,7 +893,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         )}
         {tab==="vacances"&&<CrudP title="Vacances chauffeurs" color="#7B61FF" data={dVacs} type="vacs" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
           cols="1fr 80px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN","NOTE",""]}
           rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
