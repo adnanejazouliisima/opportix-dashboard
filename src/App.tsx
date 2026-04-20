@@ -221,10 +221,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   useEffect(()=>{
     loadDataFromAPI();
     const socket=io({transports:['websocket','polling']});
+    const onChange=()=>{if(!savingRef.current) loadDataFromAPI();};
     socket.emit('auth',userToken);
-    socket.on('data-changed',()=>{if(!savingRef.current) loadDataFromAPI();});
+    socket.on('data-changed',onChange);
     const interval=setInterval(loadDataFromAPI,15000);
-    return ()=>{socket.disconnect();clearInterval(interval);};
+    return ()=>{socket.off('data-changed',onChange);socket.disconnect();clearInterval(interval);};
   },[userToken]);
 
   // Load snapshot list
@@ -234,10 +235,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   },[userToken]);
 
   const loadWeek=async(week:string|null)=>{
-    setViewWeek(week);
-    if(!week){setSnapshotData(null);return;}
-    const r=await fetch(`/api/snapshots/${week}`,{headers:{"Authorization":`Bearer ${userToken}`}});
-    if(r.ok) setSnapshotData(await r.json());
+    if(!week){setViewWeek(null);setSnapshotData(null);return;}
+    try{
+      const r=await fetch(`/api/snapshots/${week}`,{headers:{"Authorization":`Bearer ${userToken}`}});
+      if(!r.ok){setToast({msg:`Semaine ${week} introuvable`,type:"err"});setViewWeek(null);setSnapshotData(null);return;}
+      setSnapshotData(await r.json());
+      setViewWeek(week);
+    }catch{
+      setToast({msg:"Erreur chargement semaine",type:"err"});
+      setViewWeek(null);setSnapshotData(null);
+    }
   };
 
   const refreshSnapshots=async()=>{
@@ -246,6 +253,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
 
   const sv=async(o:any={})=>{
+    if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
+    // Snapshot previous state for rollback if the save fails.
+    const prev={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs};
     const d={
       u:o.u??urban,g:o.g??green,ga:o.ga??garage,
       dep:o.dep??deps,ret:o.ret??rets,
@@ -254,10 +264,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       msgs:o.msgs??msgs
     };
     savingRef.current=true;setSaving(true);
+    const rollback=()=>{setUrban(prev.u);setGreen(prev.g);setGarage(prev.ga);setDeps(prev.dep);setRets(prev.ret);setDisp(prev.di);setVacs(prev.va);setPros(prev.pr);setDpvs(prev.dpv);setRpvs(prev.rpv);setMsgs(prev.msgs);};
     try{
       const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
-      if(!res.ok){const e=await res.json().catch(()=>({error:"Erreur serveur"}));setToast({msg:e.error,type:"err"});}
-    }catch(e){setToast({msg:"Erreur réseau — modifications non sauvegardées",type:"err"});}
+      if(!res.ok){const e=await res.json().catch(()=>({error:"Erreur serveur"}));setToast({msg:e.error,type:"err"});rollback();}
+    }catch(e){setToast({msg:"Erreur réseau — modifications annulées",type:"err"});rollback();}
     finally{savingRef.current=false;setSaving(false);}
   };
 
@@ -529,6 +540,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
 
   const sendM=()=>{
+    if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour envoyer",type:"err"});return;}
     if(!newMsg.trim())return;
     const msg = {id:uid(),fr:user.displayName,po:user.pole,to:msgTo,tx:newMsg,ti:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),ur:false};
     const updated=[...msgs,msg];
@@ -615,12 +627,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const displayWeek=viewWeek||currentWeek;
         const displayRange=isHistorical&&snapshotData?{from:snapshotData.from,to:snapshotData.to}:(viewWeek?weekDateRange(viewWeek):currentRange);
         const displayNum=displayWeek.split('-W')[1];
-        const canGoPrev=snapshots.length>0&&(isHistorical?snapshots.findIndex(s=>s.weekLabel===viewWeek)<snapshots.length-1:true);
+        const canGoPrev=isHistorical?snapshots.findIndex(s=>s.weekLabel===viewWeek)<snapshots.length-1:snapshots.some(s=>s.weekLabel!==currentWeek);
         const canGoNext=isHistorical&&viewWeek!==currentWeek;
         return(
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 20px",background:isHistorical?"#FFF8F0":"#FAFAF8",borderBottom:`1px solid ${isHistorical?"#F5D9A8":"#E5E5E3"}`,fontSize:11,flexWrap:"wrap"}}>
           <span style={{fontWeight:700,color:"#888",fontSize:9,letterSpacing:.5}}>SEMAINE</span>
-          <button onClick={()=>{if(!isHistorical){const oldest=snapshots[snapshots.length-1];if(oldest&&oldest.weekLabel!==currentWeek)loadWeek(oldest.weekLabel);else if(snapshots.length>1)loadWeek(snapshots[1].weekLabel);return;}const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);const prev=snapshots[idx+1];if(prev)loadWeek(prev.weekLabel);}} disabled={!canGoPrev} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:canGoPrev?"#555":"#CCC",fontSize:11,cursor:canGoPrev?"pointer":"default",fontFamily:"inherit"}}>&#9664;</button>
+          <button onClick={()=>{if(!isHistorical){const firstPast=snapshots.find(s=>s.weekLabel!==currentWeek);if(firstPast)loadWeek(firstPast.weekLabel);return;}const idx=snapshots.findIndex(s=>s.weekLabel===viewWeek);const prev=snapshots[idx+1];if(prev)loadWeek(prev.weekLabel);}} disabled={!canGoPrev} style={{padding:"2px 8px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:canGoPrev?"#555":"#CCC",fontSize:11,cursor:canGoPrev?"pointer":"default",fontFamily:"inherit"}}>&#9664;</button>
           <span style={{fontWeight:600,color:isHistorical?"#E8633A":"#1A1A1A",minWidth:220,textAlign:"center",fontSize:11}}>
             Sem. {displayNum} — {displayRange.from} au {displayRange.to}{!isHistorical?" (en direct)":""}
           </span>

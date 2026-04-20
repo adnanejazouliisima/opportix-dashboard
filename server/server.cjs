@@ -13,7 +13,9 @@ const { Server: SocketServer } = require('socket.io');
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3000;
-const SECRET = process.env.JWT_SECRET || 'network-dashboard-secret-key-2024';
+const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
+  ? (() => { console.error('  ❌ JWT_SECRET env var requis en production'); process.exit(1); })()
+  : 'network-dashboard-secret-key-2024');
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
 
 /* ═══ CORS — only allow own origin in production ═══ */
@@ -23,15 +25,24 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: (origin, cb) => {
+    // Same-origin requests (no Origin header) and whitelisted origins allowed
     if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
-    else cb(null, true); // Allow in production since frontend is served from same origin
+    else cb(new Error('Origine non autorisee'));
   },
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
 
 /* ═══ SOCKET.IO ═══ */
-const io = new SocketServer(httpServer, { cors: { origin: '*' } });
+const io = new SocketServer(httpServer, {
+  cors: {
+    origin: (origin, cb) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
+      else cb(new Error('Origine non autorisee'));
+    },
+    credentials: true
+  }
+});
 io.on('connection', (socket) => {
   socket.on('auth', (token) => {
     try { socket.user = jwt.verify(token, SECRET); socket.join('authed'); }
@@ -237,10 +248,22 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
       return res.status(400).json({ error: `La cle "${key}" doit etre un tableau` });
     }
   }
+  // Wipe protection: refuse saves that shrink an array by more than 50% in one request (non-admins).
+  if (req.user.role !== 'admin') {
+    const existing = await db.collection('data').findOne({ _key: 'fleet' }) || {};
+    const protectedKeys = ['u', 'g', 'dep', 'ret', 'ga', 'di', 'va', 'pr'];
+    for (const key of protectedKeys) {
+      const prevLen = (existing[key] || []).length;
+      const nextLen = (d[key] || existing[key] || []).length;
+      if (key in d && prevLen >= 4 && nextLen < prevLen / 2) {
+        return res.status(403).json({ error: `Suppression massive non autorisee sur "${key}" (${prevLen} → ${nextLen}). Contactez un admin.` });
+      }
+    }
+  }
   await db.collection('data').updateOne({ _key: 'fleet' }, { $set: d }, { upsert: true });
   await audit(req.user, 'data_update', { keys: Object.keys(d) });
   // Auto-update current week's snapshot on every save
-  takeSnapshot(req.user.username).catch(() => {});
+  takeSnapshot(req.user.username).catch(err => console.error('  ⚠️ Snapshot auto-save echec:', err.message));
   broadcast();
   res.json({ ok: true });
 });
@@ -255,7 +278,7 @@ app.post('/api/data/message', auth, async (req, res) => {
     { $push: { msgs: { ...req.body, id: crypto.randomUUID() } } },
     { upsert: true }
   );
-  takeSnapshot(req.user.username).catch(() => {});
+  takeSnapshot(req.user.username).catch(err => console.error('  ⚠️ Snapshot auto-save echec:', err.message));
   broadcast();
   res.json({ ok: true });
 });
@@ -314,6 +337,13 @@ app.get('/api/history', auth, async (req, res) => {
 });
 
 /* ═══ CSV EXPORT ═══ */
+// Escape a CSV field: quote if it contains separator/quote/newline, neutralize formula-injection prefixes.
+function csvField(v) {
+  let s = v == null ? '' : String(v);
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  if (/[";\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
 app.get('/api/export/csv', auth, async (req, res) => {
   let doc;
   if (req.query.week) {
@@ -327,28 +357,29 @@ app.get('/api/export/csv', auth, async (req, res) => {
   const section = req.query.section || 'vehicles';
   let csv = '';
 
+  const row = (...fields) => fields.map(csvField).join(';') + '\n';
   if (section === 'vehicles') {
     csv = 'Societe;Immatriculation;Marque;Modele;Leaser;Statut;Chauffeur\n';
-    (doc.u || []).forEach(v => csv += `URBAN NEO;${v.im};${v.mq};${v.mo};${v.le};${v.st};${v.ch}\n`);
-    (doc.g || []).forEach(v => csv += `GREEN;${v.im};${v.mq};${v.mo};${v.le};${v.st};${v.ch}\n`);
+    (doc.u || []).forEach(v => csv += row('URBAN NEO', v.im, v.mq, v.mo, v.le, v.st, v.ch));
+    (doc.g || []).forEach(v => csv += row('GREEN', v.im, v.mq, v.mo, v.le, v.st, v.ch));
   } else if (section === 'departs') {
     csv = 'Societe;Immatriculation;Chauffeur;Date;Note\n';
-    (doc.dep || []).forEach(d => csv += `${d.soc};${d.im};${d.ch||''};${d.dt||''};${d.no||''}\n`);
+    (doc.dep || []).forEach(d => csv += row(d.soc, d.im, d.ch, d.dt, d.no));
   } else if (section === 'retours') {
     csv = 'Societe;Immatriculation;Chauffeur;Date;Note\n';
-    (doc.ret || []).forEach(d => csv += `${d.soc};${d.im};${d.ch||''};${d.dt||''};${d.no||''}\n`);
+    (doc.ret || []).forEach(d => csv += row(d.soc, d.im, d.ch, d.dt, d.no));
   } else if (section === 'garage') {
     csv = 'Societe;Immatriculation;Garage;Entree;Sortie;Jours\n';
-    (doc.ga || []).forEach(g => csv += `${g.soc};${g.im};${g.gar||''};${g.de||''};${g.ds||''};${g.ji||''}\n`);
+    (doc.ga || []).forEach(g => csv += row(g.soc, g.im, g.gar, g.de, g.ds, g.ji));
   } else if (section === 'dispo') {
     csv = 'Societe;Immatriculation;Modele;Note\n';
-    (doc.di || []).forEach(d => csv += `${d.soc};${d.im};${d.mo||''};${d.no||''}\n`);
+    (doc.di || []).forEach(d => csv += row(d.soc, d.im, d.mo, d.no));
   } else if (section === 'vacances') {
     csv = 'Chauffeur;Societe;Debut;Fin;Note\n';
-    (doc.va || []).forEach(v => csv += `${v.ch};${v.soc||''};${v.deb||''};${v.fin||''};${v.no||''}\n`);
+    (doc.va || []).forEach(v => csv += row(v.ch, v.soc, v.deb, v.fin, v.no));
   } else if (section === 'prospects') {
     csv = 'Nom;Contact;Besoin;Statut;Note\n';
-    (doc.pr || []).forEach(p => csv += `${p.nom};${p.ct||''};${p.bs||''};${p.stu||''};${p.no||''}\n`);
+    (doc.pr || []).forEach(p => csv += row(p.nom, p.ct, p.bs, p.stu, p.no));
   }
 
   await audit(req.user, 'csv_export', { section, week: req.query.week || 'live' });
@@ -383,14 +414,20 @@ app.get('/api/snapshots/:week', auth, async (req, res) => {
 
 // Monthly KPI CSV: one row per month, based on last snapshot of each month
 app.get('/api/export/csv/monthly', auth, adminOnly, async (req, res) => {
-  const all = await db.collection('snapshots').find().sort({ createdAt: 1 }).toArray();
-  // Group by YYYY-MM, keep latest snapshot per month
+  const all = await db.collection('snapshots').find().sort({ weekLabel: 1 }).toArray();
+  // Group by YYYY-MM derived from the week's Monday (not createdAt, which drifts)
+  const monthOfWeek = (weekLabel) => {
+    const range = getWeekDateRange(weekLabel); // { from: "DD/MM", to: "DD/MM" }
+    const [, year] = weekLabel.match(/^(\d{4})-W/) || [];
+    const [d, m] = range.from.split('/');
+    // Week N's Monday defines its month. Edge case: if Monday is in previous year (W1), use weekLabel's year.
+    return `${year}-${m.padStart(2,'0')}`;
+  };
   const byMonth = new Map();
   for (const s of all) {
-    const d = new Date(s.createdAt);
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+    const key = monthOfWeek(s.weekLabel);
     const prev = byMonth.get(key);
-    if (!prev || new Date(prev.createdAt) < d) byMonth.set(key, s);
+    if (!prev || prev.weekLabel < s.weekLabel) byMonth.set(key, s);
   }
 
   let csv = 'Mois;Total VH;Urban Neo Total;Urban Actifs;Urban Immo;Green Total;Green Actifs;Green Immo;Chauffeurs Actifs;En Garage;En Dispo;Vacances;Departs (mois);Retours (mois)\n';
