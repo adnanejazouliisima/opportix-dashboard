@@ -382,7 +382,7 @@ app.get('/api/snapshots/:week', auth, async (req, res) => {
 });
 
 // Monthly KPI CSV: one row per month, based on last snapshot of each month
-app.get('/api/export/csv/monthly', auth, async (req, res) => {
+app.get('/api/export/csv/monthly', auth, adminOnly, async (req, res) => {
   const all = await db.collection('snapshots').find().sort({ createdAt: 1 }).toArray();
   // Group by YYYY-MM, keep latest snapshot per month
   const byMonth = new Map();
