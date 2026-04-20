@@ -416,33 +416,14 @@ app.get('/api/snapshots/:week', auth, async (req, res) => {
   res.json(rest);
 });
 
-// Monthly KPI CSV: one row per month, based on last snapshot of each month
+// Weekly KPI CSV: one row per week snapshot (full history, chronological)
 app.get('/api/export/csv/monthly', auth, adminOnly, async (req, res) => {
   const all = await db.collection('snapshots').find().sort({ weekLabel: 1 }).toArray();
-  // Group by YYYY-MM derived from the week's Monday (not createdAt, which drifts)
-  const monthOfWeek = (weekLabel) => {
-    const range = getWeekDateRange(weekLabel); // { from: "DD/MM", to: "DD/MM" }
-    const [, year] = weekLabel.match(/^(\d{4})-W/) || [];
-    const [d, m] = range.from.split('/');
-    // Week N's Monday defines its month. Edge case: if Monday is in previous year (W1), use weekLabel's year.
-    return `${year}-${m.padStart(2,'0')}`;
-  };
-  const byMonth = new Map();
+
+  let csv = 'Semaine;Du;Au;Total VH;Urban Neo Total;Urban Actifs;Urban Immo;Green Total;Green Actifs;Green Immo;Chauffeurs Actifs;En Garage;En Dispo;Vacances;Departs (semaine);Retours (semaine)\n';
+
   for (const s of all) {
-    const key = monthOfWeek(s.weekLabel);
-    const prev = byMonth.get(key);
-    if (!prev || prev.weekLabel < s.weekLabel) byMonth.set(key, s);
-  }
-
-  let csv = 'Mois;Total VH;Urban Neo Total;Urban Actifs;Urban Immo;Green Total;Green Actifs;Green Immo;Chauffeurs Actifs;En Garage;En Dispo;Vacances;Departs (mois);Retours (mois)\n';
-  const monthInDt = (dt, monthKey) => {
-    if (!dt) return false;
-    const [, mm] = monthKey.split('-');
-    const parts = dt.split('/');
-    return parts.length >= 2 && String(parseInt(parts[1])).padStart(2,'0') === mm;
-  };
-
-  for (const [month, s] of [...byMonth.entries()].sort()) {
+    const range = s.from && s.to ? { from: s.from, to: s.to } : getWeekDateRange(s.weekLabel);
     const u = s.u || [], g = s.g || [];
     const uA = u.filter(v => v.st === 'ACTIF').length;
     const uI = u.filter(v => v.st === 'IMMO').length;
@@ -452,14 +433,24 @@ app.get('/api/export/csv/monthly', auth, adminOnly, async (req, res) => {
     const gar = (s.ga || []).length;
     const dis = (s.di || []).length;
     const vac = (s.va || []).length;
-    const deps = (s.dep || []).filter(d => monthInDt(d.dt, month)).length;
-    const rets = (s.ret || []).filter(d => monthInDt(d.dt, month)).length;
-    csv += `${month};${u.length + g.length};${u.length};${uA};${uI};${g.length};${gA};${gI};${nCh};${gar};${dis};${vac};${deps};${rets}\n`;
+    // Departs/retours carry "DD/MM" — count those falling inside this week's date range.
+    const inWeek = (dt) => {
+      if (!dt) return false;
+      const [d, m] = dt.split('/').map(Number);
+      if (!d || !m) return false;
+      const [fd, fm] = range.from.split('/').map(Number);
+      const [td, tm] = range.to.split('/').map(Number);
+      const toNum = (dd, mm) => mm * 100 + dd;
+      return toNum(d, m) >= toNum(fd, fm) && toNum(d, m) <= toNum(td, tm);
+    };
+    const deps = (s.dep || []).filter(x => inWeek(x.dt)).length;
+    const rets = (s.ret || []).filter(x => inWeek(x.dt)).length;
+    csv += `${s.weekLabel};${range.from};${range.to};${u.length + g.length};${u.length};${uA};${uI};${g.length};${gA};${gI};${nCh};${gar};${dis};${vac};${deps};${rets}\n`;
   }
 
-  await audit(req.user, 'csv_export_monthly', { months: byMonth.size });
+  await audit(req.user, 'csv_export_weekly', { weeks: all.length });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename=opportix_mensuel_${new Date().toISOString().slice(0,10)}.csv`);
+  res.setHeader('Content-Disposition', `attachment; filename=opportix_hebdo_${new Date().toISOString().slice(0,10)}.csv`);
   res.send('\uFEFF' + csv);
 });
 
