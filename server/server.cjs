@@ -11,6 +11,8 @@ const http = require('http');
 const { Server: SocketServer } = require('socket.io');
 
 const app = express();
+// Trust one proxy hop (Render/Heroku/etc.) so req.ip works and rate-limit keys on real client IP.
+app.set('trust proxy', 1);
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
@@ -19,9 +21,11 @@ const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
 
 /* ═══ CORS — only allow own origin in production ═══ */
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
+const ALLOWED_ORIGINS = [
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:3000']),
+  // Render sets this automatically on deploy — include it so cross-origin calls from the deployed frontend pass.
+  process.env.RENDER_EXTERNAL_URL,
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
