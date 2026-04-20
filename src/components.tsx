@@ -58,11 +58,16 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
       <div style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
         data.map((d:any,i:number)=>(
-          <div key={d.id??d.im??i} className="diff-row" style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
-            {editId===d.id?<>{formFields.map(([k,,p,opts]:any)=><span key={k}>{opts
-              ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
-              :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:9,padding:"2px 4px"}}/>
-            }</span>)}<span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}><button onClick={saveEdit} style={{padding:"1px 4px",borderRadius:3,border:"none",background:"#1E8A52",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"1px 4px",borderRadius:3,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>X</button></span></>
+          <div key={d.id??d.im??i} className="diff-row" style={editId===d.id?{padding:"8px 12px",borderBottom:"1px solid #F5F5F3",background:"#FAFAF8"}:{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
+            {editId===d.id?<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-end"}}>{formFields.map(([k,l,p,opts]:any)=>(
+              <div key={k} style={{flex:"1 1 80px",minWidth:70}}>
+                <div style={{fontSize:9,fontWeight:600,color:"#888",marginBottom:2}}>{l}</div>
+                {opts
+                  ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
+                  :<input value={editF[k]||""} onChange={e=>setEditF({...editF,[k]:e.target.value})} placeholder={p} style={{...iS,width:"100%",fontSize:10,padding:"5px 6px",background:"#fff"}}/>
+                }
+              </div>
+            ))}<button onClick={saveEdit} style={{padding:"5px 12px",borderRadius:5,border:"none",background:"#1E8A52",color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit",height:28}}>OK</button><button onClick={()=>setEditId(null)} style={{padding:"5px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit",height:28}}>Annuler</button></div>
             :<>{renderRow(d,i)}
             <span style={{display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
               {delId===(useIdx?i:d.id)
