@@ -131,6 +131,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [viewWeek,setViewWeek]=useState<string|null>(null);
   const [snapshotData,setSnapshotData]=useState<any>(null);
   const isHistorical=viewWeek!==null;
+  // Force read-only role when viewing a past week so child components hide write buttons.
+  const displayUser=isHistorical?{...user,role:"lecteur"}:user;
 
   useEffect(()=>{ce.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   
@@ -534,6 +536,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
 
   const tog=(im:string)=>{
+    if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
     const up=(l:any[])=>l.map(v=>v.im===im?{...v,st:v.st==="ACTIF"?"IMMO":"ACTIF"}:v);
     if(fTab==="urban"){const n=up(urban);setUrban(n);sv({u:n});}
     else{const n=up(green);setGreen(n);sv({g:n});}
@@ -692,7 +695,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("dpvs",id)}
                 onEdit={(id:any,updated:any)=>edit("dpvs",id,updated)}
                 onConfirm={(id:any)=>confirmPrevu("dpvs",id)}
-                user={user}
+                user={displayUser}
               />
               <DiffBlock title="RETOURS À PRÉVOIR" titleBg="#D4F0E0" color="#2FAA6B" count={dRpvs.length}
                 heads={["SOC","IMMAT","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 1fr 50px 1fr" data={dRpvs} maxH={180}
@@ -702,7 +705,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("rpvs",id)}
                 onEdit={(id:any,updated:any)=>edit("rpvs",id,updated)}
                 onConfirm={(id:any)=>confirmPrevu("rpvs",id)}
-                user={user}
+                user={displayUser}
               />
               <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${dDisp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${dDisp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
                 heads={["SOCIETE","IMMAT","MODELE","NOTE"]} cols="65px 90px 1fr 1fr" data={dDisp} maxH={160}
@@ -710,7 +713,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["no","Note","..."]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("disp",{...f,im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("disp",id)}
-                user={user}
+                user={displayUser}
               />
               <DiffBlock title="GARAGE URBAN" titleBg="#FDF4E3" color="#D4A027" count={`${dGarage.filter((g:any)=>g.soc==="URBAN NEO").length} VH`}
                 heads={["IMMAT","MODELE","GARAGE","ENTREE","SORTIE"]} cols="85px 70px 1fr 55px 55px" data={dGarage.filter((g:any)=>g.soc==="URBAN NEO")} maxH={160}
@@ -720,7 +723,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("garage",id)}
                 onEdit={(id:any,updated:any)=>edit("garage",id,updated)}
                 onExit={(id:any)=>del("garage",id)}
-                user={user}
+                user={displayUser}
               />
               <DiffBlock title="GARAGE GREEN" titleBg="#FDF4E3" color="#D4A027" count={`${dGarage.filter((g:any)=>g.soc==="GREEN").length} VH`}
                 heads={["IMMAT","MODELE","GARAGE","ENTREE","SORTIE"]} cols="85px 70px 1fr 55px 55px" data={dGarage.filter((g:any)=>g.soc==="GREEN")} maxH={160}
@@ -730,7 +733,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("garage",id)}
                 onEdit={(id:any,updated:any)=>edit("garage",id,updated)}
                 onExit={(id:any)=>del("garage",id)}
-                user={user}
+                user={displayUser}
               />
               <DiffBlock title="VACANCES CHAUFFEURS" titleBg="#EDE8FA" color="#7B61FF" count={dVacs.length}
                 heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN"]} cols="1fr 65px 70px 70px" data={dVacs} maxH={160}
@@ -738,7 +741,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
-                user={user}
+                user={displayUser}
               />
             </div>
           </div>
@@ -776,7 +779,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{...iS,width:220}}/>
-              {user.role!=='lecteur' && <button onClick={()=>showAdd==="fleet"?setShowAdd(null):setShowAdd("fleet")} style={oBtn("#E8633A",showAdd==="fleet")}>{showAdd==="fleet"?"Annuler":"+ Ajouter"}</button>}
+              {displayUser.role!=='lecteur' && <button onClick={()=>showAdd==="fleet"?setShowAdd(null):setShowAdd("fleet")} style={oBtn("#E8633A",showAdd==="fleet")}>{showAdd==="fleet"?"Annuler":"+ Ajouter"}</button>}
             </div>
             {showAdd==="fleet"&&<AddBox fields={[["Immat *","im","XX-000-XX"],["Marque","mq","HYUNDAI"],["Modele","mo","KONA"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"]]} form={form} setForm={setForm} onAdd={()=>{if(!form.im?.trim())return;add(fTab,{...form,im:form.im.toUpperCase().trim(),mq:(form.mq||"").toUpperCase().trim(),st:form.st||"ACTIF"});}} extra={<Sel l="Statut" v={form.st||"ACTIF"} set={(v:string)=>setForm({...form,st:v})} opts={["ACTIF","IMMO"]}/>}/>}
             <div style={{fontSize:11,color:"#AAA",marginBottom:6}}>{filt.length} VH</div>
@@ -816,9 +819,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                       <span style={{color:"#777",fontSize:11}}>{v.mq}</span>
                       <span style={{color:"#777",fontSize:11}}>{v.mo}</span>
                       <span style={{color:"#AAA",fontSize:10}}>{v.le}</span>
-                      <span><button onClick={()=>tog(v.im)} style={{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit",background:v.st==="ACTIF"?"#E8F8F0":"#FDECEC",color:v.st==="ACTIF"?"#1E8A52":"#C0392B"}}>{v.st}</button></span>
+                      <span>{displayUser.role!=='lecteur'?<button onClick={()=>tog(v.im)} style={{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit",background:v.st==="ACTIF"?"#E8F8F0":"#FDECEC",color:v.st==="ACTIF"?"#1E8A52":"#C0392B"}}>{v.st}</button>:<span style={{fontSize:9,fontWeight:700,color:v.st==="ACTIF"?"#1E8A52":"#C0392B"}}>{v.st}</span>}</span>
                       <span style={{textAlign:"right",display:"inline-flex",gap:2,justifyContent:"flex-end"}}>
-                        {delC===v.im?<><button onClick={()=>del(fTab,fTab==="urban"?urban.indexOf(v):green.indexOf(v),true)} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelC(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></>:user.role!=='lecteur'&&<><button className="dl" onClick={()=>{setEditFleetIm(v.im);setEditFleetF({});}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button><button className="dl" onClick={()=>setDelC(v.im)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Suppr</button></>}
+                        {delC===v.im?<><button onClick={()=>del(fTab,fTab==="urban"?urban.indexOf(v):green.indexOf(v),true)} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setDelC(null)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Non</button></>:displayUser.role!=='lecteur'&&<><button className="dl" onClick={()=>{setEditFleetIm(v.im);setEditFleetF({});}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Editer</button><button className="dl" onClick={()=>setDelC(v.im)} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Suppr</button></>}
                       </span>
                     </>}
                   </div>
@@ -831,25 +834,25 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
         {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={dDeps} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","BYD SEAL"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
           cols="80px 100px 80px 70px 1fr 70px 1fr 90px" heads={["SOCIETE","IMMAT","MODELE","LEASER","CHAUFFEUR","DATE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#666",fontSize:11}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.le||"—"}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#777",fontSize:11}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="retours"&&<CrudP title="Retours" color="#2FAA6B" data={dRets} type="rets" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
           cols="80px 100px 1fr 80px 1fr 60px" heads={["SOCIETE","IMMAT","CHAUFFEUR","DATE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.ch}</span><span style={{color:"#777",fontSize:11}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="dispo"&&<CrudP title="Vehicules disponibles" color="#3A9BD5" data={dDisp} type="disp" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
           cols="80px 100px 1fr 1fr 60px" heads={["SOCIETE","IMMAT","MODELE","NOTE",""]}
           rr={(d:any)=><><span><SocBadge s={d.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:11}}>{d.no||"—"}</span></>}
         />}
         {tab==="garage"&&<CrudP title="Garage" color="#D4A027" data={dGarage} type="garage" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","KONA..."],["Garage","gar","Nom"],["Entree","de","JJ/MM"],["Sortie","ds","JJ/MM"],["Jours","ji","0"]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} exitItem={(t:string,id:any)=>del(t,id)} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} exitItem={(t:string,id:any)=>del(t,id)} user={displayUser}
           cols="80px 100px 90px 1fr 70px 70px 50px 110px" heads={["SOCIETE","IMMAT","MODELE","GARAGE","ENTREE","SORTIE","JOURS",""]}
           rr={(g:any)=><><span><SocBadge s={g.soc}/></span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:11}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.de||"—"}</span><span style={{color:"#777",fontSize:11}}>{g.ds||"—"}</span><span style={{color:"#999",fontSize:11}}>{g.ji||"—"}</span></>}
         />}
@@ -887,7 +890,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         )}
         {tab==="vacances"&&<CrudP title="Vacances chauffeurs" color="#7B61FF" data={dVacs} type="vacs" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
-          form={form} setForm={setForm} addItem={add} delItem={del} user={user}
+          form={form} setForm={setForm} addItem={add} delItem={del} user={displayUser}
           cols="1fr 80px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN","NOTE",""]}
           rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
@@ -913,11 +916,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 ))}
                 <div ref={ce}/>
               </div>
-              <div style={{display:"flex",gap:6,padding:"8px 12px",borderTop:"1px solid #E5E5E3",background:"#FAFAF8",flexWrap:"wrap"}}>
+              {!isHistorical&&<div style={{display:"flex",gap:6,padding:"8px 12px",borderTop:"1px solid #E5E5E3",background:"#FAFAF8",flexWrap:"wrap"}}>
                 <select value={msgTo} onChange={e=>setMsgTo(e.target.value)} style={{...iS,width:120,fontSize:11}}><option value="all">Tous</option><option value="activite">Activite</option><option value="parc">Parc</option><option value="commercial">Commercial</option></select>
                 <input value={newMsg} onChange={e=>setNewMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendM()} placeholder="Message..." style={{...iS,flex:1}}/>
                 <button onClick={sendM} style={{padding:"7px 16px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontWeight:600,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Envoyer</button>
-              </div>
+              </div>}
             </div>
           </div>
         )}
