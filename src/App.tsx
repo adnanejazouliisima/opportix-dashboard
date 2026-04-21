@@ -593,7 +593,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .nav-scroll::-webkit-scrollbar{display:none}
         }
         @media(min-width:1920px){
-          .app-main{max-width:1600px!important}
+          body{zoom:1.25}
+        }
+        @media(min-width:2560px){
+          body{zoom:1.5}
         }
       `}</style>
 
