@@ -194,7 +194,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           }
           return patched;
         }));
-        const sortByDate=(a:any[])=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
+        const sortByDate=(a:any[])=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return Infinity;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(x.dt)-p(y.dt);});
         if(data.dep) setDeps(sortByDate(depList));
         if(data.ret) setRets(sortByDate(data.ret));
         if(data.di) setDisp(data.di);
@@ -306,7 +306,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isHistorical) return;
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
     const[arr,set,k]=m[type];
-    const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
+    const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return Infinity;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(x.dt)-p(y.dt);});
     const n=[...arr,(type==="urban"||type==="green")?{...entry}:{...entry,id:uid()}];
     if(type==="deps"||type==="rets") set(sortByDate(n)); else set(n);
     
@@ -431,7 +431,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isHistorical) return;
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
     const[arr,set,k]=m[type];
-    const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
+    const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return Infinity;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(x.dt)-p(y.dt);});
     const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
     if(type==="deps"||type==="rets") set(sortByDate(n)); else set(n);
     // Sync modele/chauffeur/societe to fleet when editing a departure
