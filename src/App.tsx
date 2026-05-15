@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
 import { Toast, Pill, Sel, StBadge, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
+import logoUrl from "./assets/logo.jpeg";
 
 
 
@@ -609,7 +610,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
       <header className="app-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div className="logo-icon" style={{width:30,height:30,borderRadius:7,background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#fff",fontFamily:"'IBM Plex Mono',monospace"}}>O</div>
+          <img className="logo-icon" src={logoUrl} alt="Opportix" style={{width:30,height:30,borderRadius:7,objectFit:"cover",display:"block"}}/>
           <div><div className="logo-text" style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
