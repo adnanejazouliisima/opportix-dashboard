@@ -287,7 +287,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const dRets=isHistorical?(snapshotData?.ret||[]):rets;
   const dGarage=isHistorical?(snapshotData?.ga||[]):garage;
   const dDisp=isHistorical?(snapshotData?.di||[]):disp;
-  const dVacs=isHistorical?(snapshotData?.va||[]):vacs;
+  // Tri vacances par date de fin croissante (la plus proche en haut). Sans fin → tout en bas.
+  const dVacs=(()=>{
+    const src=isHistorical?(snapshotData?.va||[]):vacs;
+    const p=(d:string)=>{if(!d)return Infinity;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};
+    return [...src].sort((x:any,y:any)=>p(x.fin)-p(y.fin));
+  })();
   const dPros=isHistorical?(snapshotData?.pr||[]):pros;
   const dDpvs=isHistorical?(snapshotData?.dpv||[]):dpvs;
   const dRpvs=isHistorical?(snapshotData?.rpv||[]):rpvs;
