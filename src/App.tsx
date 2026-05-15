@@ -744,9 +744,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 user={displayUser}
               />
               <DiffBlock title="VACANCES CHAUFFEURS" titleBg="#EDE8FA" color="#7B61FF" count={dVacs.length}
-                heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN"]} cols="1fr 65px 70px 70px" data={dVacs} maxH={160}
-                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span></>}
-                formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
+                heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN"]} cols="1fr 65px 75px 60px 60px" data={dVacs} maxH={160}
+                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#666",fontSize:10}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span></>}
+                formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["mo","Modele","KONA..."],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
                 onEdit={(id:any,updated:any)=>edit("vacs",id,updated)}
@@ -898,10 +898,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           </div>
         )}
         {tab==="vacances"&&<CrudP title="Vacances chauffeurs" color="#7B61FF" data={dVacs} type="vacs" showAdd={showAdd} setShowAdd={setShowAdd}
-          fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
+          fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Modele","mo","KONA..."],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
-          cols="1fr 80px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","DEBUT","FIN","NOTE",""]}
-          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
+          cols="1fr 80px 90px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","NOTE",""]}
+          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
         {tab==="messagerie"&&(
           <div className="ani">
