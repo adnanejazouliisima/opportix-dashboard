@@ -125,6 +125,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [histSearch,setHistSearch]=useState("");
   const ce=useRef<HTMLDivElement>(null);
   const savingRef=useRef(false);
+  // Incremented on every save start. Un GET en vol qui termine apres un save voit son
+  // generation perimee et n'applique pas son resultat (sinon il ecraserait la modif locale).
+  const saveGenRef=useRef(0);
   const [toast,setToast]=useState<{msg:string,type:"ok"|"err"}|null>(null);
   const [saving,setSaving]=useState(false);
   const [snapshots,setSnapshots]=useState<{weekLabel:string,from:string,to:string,createdAt:string}[]>([]);
@@ -139,10 +142,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   // Charge les données depuis l'API
   const loadDataFromAPI=async()=>{
     if(savingRef.current) return;
+    const genAtStart=saveGenRef.current;
     try{
       const res=await fetch(`${API_URL}/api/data`,{
         headers:{"Authorization":`Bearer ${userToken}`}
       });
+      // Si un save a demarre pendant ce GET, ses donnees sont peut-etre obsoletes — on jette.
+      if(saveGenRef.current!==genAtStart||savingRef.current) return;
       if(res.status===401){
         const d=await res.json().catch(()=>({}));
         if(d.expired){setToast({msg:"Session expirée — reconnectez-vous",type:"err"});setTimeout(onLogout,2000);}
@@ -159,28 +165,22 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           return v;
         });
         u=fixFleet(u);g=fixFleet(g);
-        // Sync: ajouter les véhicules des départs manquants dans la flotte
+        // Sync modele/leaser des departs vers la flotte si manquants — mais NE PAS recreer
+        // les vehicules supprimes (sinon une suppression dans Vehicules est annulee par le
+        // depart qui pointe encore vers la plaque).
         depList.forEach((d:any)=>{
           if(!d.im) return;
           const im=d.im.toUpperCase().trim();
           const exists=[...u,...g].find((v:any)=>v.im===im);
-          if(!exists){
-            const pm=d.mo?parseMo(d.mo):{mq:"",mo:""};
-            const le=(d.le||"").toUpperCase().trim();
-            const newVeh={im,mq:pm.mq,mo:pm.mo,le,st:"ACTIF",ch:d.ch||""};
-            if(d.soc==="GREEN"){g=[...g,newVeh];}else{u=[...u,newVeh];}
+          if(!exists) return;
+          const pm=d.mo?parseMo(d.mo):{mq:"",mo:""};
+          const le=(d.le||"").toUpperCase().trim();
+          const needSync=(d.mo&&!exists.mo)||(le&&!exists.le);
+          if(needSync){
+            const upd=(v:any)=>v.im===im?{...v,mq:pm.mq||v.mq,mo:pm.mo||v.mo,le:le||v.le}:v;
+            if(u.find((v:any)=>v.im===im)) u=u.map(upd);
+            if(g.find((v:any)=>v.im===im)) g=g.map(upd);
             changed=true;
-          } else {
-            // Sync modele/leaser from departure to fleet if fleet is missing them
-            const pm=d.mo?parseMo(d.mo):{mq:"",mo:""};
-            const le=(d.le||"").toUpperCase().trim();
-            const needSync=(d.mo&&!exists.mo)||(le&&!exists.le);
-            if(needSync){
-              const upd=(v:any)=>v.im===im?{...v,mq:pm.mq||v.mq,mo:pm.mo||v.mo,le:le||v.le}:v;
-              if(u.find((v:any)=>v.im===im)) u=u.map(upd);
-              if(g.find((v:any)=>v.im===im)) g=g.map(upd);
-              changed=true;
-            }
           }
         });
         setUrban(u);setGreen(g);
@@ -257,17 +257,19 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
   const sv=async(o:any={})=>{
     if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
-    // Snapshot previous state for rollback if the save fails.
-    const prev={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs};
-    const d={
-      u:o.u??urban,g:o.g??green,ga:o.ga??garage,
-      dep:o.dep??deps,ret:o.ret??rets,
-      di:o.di??disp,va:o.va??vacs,pr:o.pr??pros,
-      dpv:o.dpv??dpvs,rpv:o.rpv??rpvs,
-      msgs:o.msgs??msgs
-    };
-    savingRef.current=true;setSaving(true);
-    const rollback=()=>{setUrban(prev.u);setGreen(prev.g);setGarage(prev.ga);setDeps(prev.dep);setRets(prev.ret);setDisp(prev.di);setVacs(prev.va);setPros(prev.pr);setDpvs(prev.dpv);setRpvs(prev.rpv);setMsgs(prev.msgs);};
+    // Patch save: n'envoyer QUE les cles explicitement passees pour eviter d'ecraser
+    // les modifications faites par d'autres utilisateurs (le serveur fait un $set partiel).
+    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs'] as const;
+    const d:any={};
+    for(const k of validKeys){ if(k in o) d[k]=o[k]; }
+    if(Object.keys(d).length===0) return;
+    // Snapshot previous state for rollback (uniquement les cles modifiees).
+    const prev:any={};
+    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs};
+    for(const k of Object.keys(d)) prev[k]=cur[k];
+    savingRef.current=true;setSaving(true);saveGenRef.current++;
+    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs};
+    const rollback=()=>{for(const k of Object.keys(prev)) setters[k](prev[k]);};
     try{
       const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
       if(!res.ok){const e=await res.json().catch(()=>({error:"Erreur serveur"}));setToast({msg:e.error,type:"err"});rollback();}
@@ -687,6 +689,15 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
 
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${dDisp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${dDisp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
+                heads={["SOCIETE","IMMAT","MODELE","NOTE"]} cols="65px 90px 1fr 1fr" data={dDisp} maxH={160}
+                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.no||"—"}</span></>}
+                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["no","Note","..."]]}
+                onAdd={(f:any)=>{if(!f.im?.trim())return;add("disp",{...f,im:f.im.toUpperCase().trim()});}}
+                onDel={(id:any)=>del("disp",id)}
+                onEdit={(id:any,updated:any)=>edit("disp",id,updated)}
+                user={displayUser}
+              />
               <DiffBlock title="DEPARTS À PRÉVOIR" titleBg="#FDECEA" color="#D94F3B" count={dDpvs.length}
                 heads={["SOC","IMMAT","MODELE","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 60px 1fr 50px 1fr" data={dDpvs} maxH={180}
                 renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im||"—"}</span><span style={{color:"#666",fontSize:10}}>{d.mo||"—"}</span><span style={{color:"#444"}}>{d.ch||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.co||d.no||"—"}</span></>}
@@ -697,25 +708,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onConfirm={(id:any)=>confirmPrevu("dpvs",id)}
                 user={displayUser}
               />
-              <DiffBlock title="RETOURS À PRÉVOIR" titleBg="#D4F0E0" color="#2FAA6B" count={dRpvs.length}
-                heads={["SOC","IMMAT","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 1fr 50px 1fr" data={dRpvs} maxH={180}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im||"—"}</span><span style={{color:"#444"}}>{d.ch||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.co||d.no||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat","XX-000-XX"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"],["no","Note","..."],["co","Commentaire","..."]]}
-                onAdd={(f:any)=>{add("rpvs",{...f,im:(f.im||"").toUpperCase().trim()});}}
-                onDel={(id:any)=>del("rpvs",id)}
-                onEdit={(id:any,updated:any)=>edit("rpvs",id,updated)}
-                onConfirm={(id:any)=>confirmPrevu("rpvs",id)}
-                user={displayUser}
-              />
-              <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${dDisp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${dDisp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
-                heads={["SOCIETE","IMMAT","MODELE","NOTE"]} cols="65px 90px 1fr 1fr" data={dDisp} maxH={160}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.no||"—"}</span></>}
-                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["no","Note","..."]]}
-                onAdd={(f:any)=>{if(!f.im?.trim())return;add("disp",{...f,im:f.im.toUpperCase().trim()});}}
-                onDel={(id:any)=>del("disp",id)}
-                onEdit={(id:any,updated:any)=>edit("disp",id,updated)}
-                user={displayUser}
-              />
               <DiffBlock title="GARAGE URBAN" titleBg="#FDF4E3" color="#D4A027" count={`${dGarage.filter((g:any)=>g.soc==="URBAN NEO").length} VH`}
                 heads={["IMMAT","MODELE","GARAGE","ENTREE","SORTIE"]} cols="85px 70px 1fr 55px 55px" data={dGarage.filter((g:any)=>g.soc==="URBAN NEO")} maxH={160}
                 renderRow={(g:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{g.im}</span><span style={{color:"#666",fontSize:10}}>{g.mo||"—"}</span><span style={{color:"#444"}}>{g.gar||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.de||"—"}</span><span style={{color:"#999",fontSize:10}}>{g.ds||"—"}</span></>}
@@ -724,6 +716,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 onDel={(id:any)=>del("garage",id)}
                 onEdit={(id:any,updated:any)=>edit("garage",id,updated)}
                 onExit={(id:any)=>del("garage",id)}
+                user={displayUser}
+              />
+              <DiffBlock title="RETOURS À PRÉVOIR" titleBg="#D4F0E0" color="#2FAA6B" count={dRpvs.length}
+                heads={["SOC","IMMAT","CHAUFFEUR","DATE","COMMENTAIRE"]} cols="55px 80px 1fr 50px 1fr" data={dRpvs} maxH={180}
+                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im||"—"}</span><span style={{color:"#444"}}>{d.ch||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.dt||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.co||d.no||"—"}</span></>}
+                formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat","XX-000-XX"],["ch","Chauffeur","Nom"],["dt","Date","JJ/MM"],["no","Note","..."],["co","Commentaire","..."]]}
+                onAdd={(f:any)=>{add("rpvs",{...f,im:(f.im||"").toUpperCase().trim()});}}
+                onDel={(id:any)=>del("rpvs",id)}
+                onEdit={(id:any,updated:any)=>edit("rpvs",id,updated)}
+                onConfirm={(id:any)=>confirmPrevu("rpvs",id)}
                 user={displayUser}
               />
               <DiffBlock title="GARAGE GREEN" titleBg="#FDF4E3" color="#D4A027" count={`${dGarage.filter((g:any)=>g.soc==="GREEN").length} VH`}
