@@ -240,7 +240,9 @@ app.get('/api/data', auth, async (req, res) => {
 
 app.put('/api/data', auth, canEdit, async (req, res) => {
   const d = req.body;
-  const validKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs'];
+  const arrayKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs'];
+  const numberKeys = ['vp'];
+  const validKeys = [...arrayKeys, ...numberKeys];
   if (!d || typeof d !== 'object' || Array.isArray(d)) {
     return res.status(400).json({ error: 'Corps de requete invalide' });
   }
@@ -248,8 +250,11 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
     if (!validKeys.includes(key)) {
       return res.status(400).json({ error: `Cle non autorisee: ${key}` });
     }
-    if (!Array.isArray(d[key])) {
+    if (arrayKeys.includes(key) && !Array.isArray(d[key])) {
       return res.status(400).json({ error: `La cle "${key}" doit etre un tableau` });
+    }
+    if (numberKeys.includes(key) && (typeof d[key] !== 'number' || !Number.isFinite(d[key]) || d[key] < 0)) {
+      return res.status(400).json({ error: `La cle "${key}" doit etre un nombre positif` });
     }
   }
   // Wipe protection: refuse saves that shrink an array by more than 50% in one request (non-admins).

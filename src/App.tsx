@@ -112,6 +112,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [dpvs,setDpvs]=useState<any[]>([]);
   const [rpvs,setRpvs]=useState<any[]>([]);
   const [msgs,setMsgs]=useState<any[]>([]);
+  const [vp,setVp]=useState<number>(0);
+  const [editingVp,setEditingVp]=useState(false);
+  const [vpDraft,setVpDraft]=useState("0");
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
   const [newMsg,setNewMsg]=useState("");
@@ -204,6 +207,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(data.dpv) setDpvs(data.dpv);
         if(data.rpv) setRpvs(data.rpv);
         if(data.msgs) setMsgs(data.msgs);
+        if(typeof data.vp==='number') setVp(data.vp);
         // Save synced fleet if vehicles were added
         if(changed){
           savingRef.current=true;setSaving(true);
@@ -260,16 +264,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
     // Patch save: n'envoyer QUE les cles explicitement passees pour eviter d'ecraser
     // les modifications faites par d'autres utilisateurs (le serveur fait un $set partiel).
-    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs'] as const;
+    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs','vp'] as const;
     const d:any={};
     for(const k of validKeys){ if(k in o) d[k]=o[k]; }
     if(Object.keys(d).length===0) return;
     // Snapshot previous state for rollback (uniquement les cles modifiees).
     const prev:any={};
-    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs};
+    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs,vp};
     for(const k of Object.keys(d)) prev[k]=cur[k];
     savingRef.current=true;setSaving(true);saveGenRef.current++;
-    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs};
+    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs,vp:setVp};
     const rollback=()=>{for(const k of Object.keys(prev)) setters[k](prev[k]);};
     try{
       const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
@@ -295,6 +299,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     return [...src].sort((x:any,y:any)=>p(x.fin)-p(y.fin));
   })();
   const dPros=isHistorical?(snapshotData?.pr||[]):pros;
+  const dVp=isHistorical?(typeof snapshotData?.vp==='number'?snapshotData.vp:0):vp;
   const dDpvs=isHistorical?(snapshotData?.dpv||[]):dpvs;
   const dRpvs=isHistorical?(snapshotData?.rpv||[]):rpvs;
   const dMsgs=isHistorical?(snapshotData?.msgs||[]):msgs;
@@ -692,6 +697,32 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                   )}
                 </div>
               ))}
+              {(()=>{
+                const canEditVp=!isHistorical && displayUser.role!=='lecteur';
+                const saveVp=()=>{
+                  const n=parseInt(vpDraft,10);
+                  const final=Number.isFinite(n)&&n>=0?n:0;
+                  setVp(final);setEditingVp(false);
+                  sv({vp:final});
+                };
+                return (
+                  <div className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 14px",borderLeft:"3px solid #E8633A",border:"1px solid #E5E5E3"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8}}>VP (VEHICULES PERSO)</div>
+                      {canEditVp&&!editingVp&&<button onClick={()=>{setVpDraft(String(dVp));setEditingVp(true);}} style={{padding:"1px 7px",borderRadius:4,border:"1px solid #E0E0DE",background:"#fff",color:"#999",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Modifier</button>}
+                    </div>
+                    {editingVp?(
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <input type="number" min={0} value={vpDraft} onChange={e=>setVpDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveVp();if(e.key==='Escape')setEditingVp(false);}} autoFocus style={{width:80,fontSize:24,fontWeight:800,color:"#E8633A",fontFamily:"'IBM Plex Mono',monospace",padding:"2px 6px",border:"1px solid #E8633A",borderRadius:5,outline:"none"}}/>
+                        <button onClick={saveVp} style={{padding:"4px 10px",borderRadius:5,border:"none",background:"#1E8A52",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
+                        <button onClick={()=>setEditingVp(false)} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                      </div>
+                    ):(
+                      <div className="stat-value" style={{fontSize:32,fontWeight:800,color:"#E8633A",fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{dVp}</div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
