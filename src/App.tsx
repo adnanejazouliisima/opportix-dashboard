@@ -330,10 +330,27 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isNaN(d.getTime())) return Infinity;
     return Math.floor((new Date(todayISO).getTime()-d.getTime())/86400000);
   };
+  // Accepte YYYY-MM-DD, DD/MM/YYYY, DD/MM/YY, DD/MM. Renvoie ISO YYYY-MM-DD ou la chaine brute si non reconnue.
+  const normalizeDate=(s?:string):string=>{
+    if(!s) return "";
+    const t=s.trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    let m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+    m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if(m) return `20${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+    m=t.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if(m){const y=new Date().getFullYear();return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;}
+    return t;
+  };
   const lastSuiviDate=(im:string,fallback?:string)=>{
-    let max:string|undefined=undefined;
-    for(const s of suivis){if(s.im===im&&s.date&&(!max||s.date>max)) max=s.date;}
-    return max||fallback;
+    let maxIso:string|undefined=undefined;
+    for(const s of suivis){
+      if(s.im!==im||!s.date) continue;
+      const iso=normalizeDate(s.date);
+      if(!maxIso||iso>maxIso) maxIso=iso;
+    }
+    return maxIso||(fallback?normalizeDate(fallback):undefined);
   };
   // Liste basee sur les donnees LIVE (jamais les snapshots) pour que la cloche reflete l'etat actuel.
   const liveAll=[...urban.map(v=>({...v,soc:"URBAN NEO",_last:lastSuiviDate(v.im,v.vs)})),...green.map(v=>({...v,soc:"GREEN",_last:lastSuiviDate(v.im,v.vs)}))];
@@ -477,14 +494,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         sv({u:nu,g:ng,[k]:n,di:nd,...extra});
       }else{sv({[k]:n,...extra});}
     }else if(type==="suivis"&&entry.im){
-      // Enrichir la nouvelle entree avec soc/ch/mo du vehicule + normaliser type/prix
+      // Enrichir la nouvelle entree avec soc/ch/mo du vehicule + normaliser type/prix/date
       const im=entry.im.toUpperCase().trim();
       const inU=urban.find((v:any)=>v.im===im);
       const inG=green.find((v:any)=>v.im===im);
       const veh=inU||inG;
       if(!veh){setToast({msg:`Vehicule ${im} introuvable dans la flotte`,type:"err"});setShowAdd(null);setForm({});return;}
       const lastIdx=n.length-1;
-      const norm={...n[lastIdx],im,soc:inU?"URBAN NEO":"GREEN",ch:veh.ch||"",mo:n[lastIdx].mo||veh.mo||"",prix:parseFloat(String(n[lastIdx].prix||0))||0,type:(n[lastIdx].type||"SUIVI").toUpperCase()};
+      const norm={...n[lastIdx],im,soc:inU?"URBAN NEO":"GREEN",ch:veh.ch||"",mo:n[lastIdx].mo||veh.mo||"",date:normalizeDate(n[lastIdx].date),prix:parseFloat(String(n[lastIdx].prix||0))||0,type:(n[lastIdx].type||"SUIVI").toUpperCase()};
       if(norm.type!=="IMPACTAGE") norm.prix=0;
       const fixed=[...n.slice(0,lastIdx),norm];
       set(fixed);
@@ -499,7 +516,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"],suivis:[suivis,setSuivis,"suivis"]};
     const[arr,set,k]=m[type];
     const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
-    const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
+    const n=arr.map((d:any)=>{
+      if(d.id!==id) return d;
+      const merged:any={...d,...updated,im:updated.im?.toUpperCase().trim()||d.im};
+      if(type==="suivis"){
+        if(merged.date) merged.date=normalizeDate(merged.date);
+        if(merged.type) merged.type=String(merged.type).toUpperCase();
+        merged.prix=merged.type==="IMPACTAGE"?(parseFloat(String(merged.prix||0))||0):0;
+      }
+      return merged;
+    });
     if(type==="deps"||type==="rets") set(sortByDate(n)); else set(n);
     // Sync modele/chauffeur/societe to fleet when editing a departure
     if(type==="deps"&&updated.im){
@@ -1079,7 +1105,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 <Pill c="#E8633A" t={`${totalImpactage.toFixed(2)} € total impactage`}/>
               </div>
               <CrudP title="Historique des suivis" color="#2FAA6B" data={sortedSuivis} type="suivis" showAdd={showAdd} setShowAdd={setShowAdd}
-                fields={[["Immat *","im","XX-000-XX"],["Date *","date","YYYY-MM-DD"],["Type","type",null,["SUIVI","IMPACTAGE"]],["Prix (€)","prix","0"],["Commentaire","co","..."]]}
+                fields={[["Immat *","im","XX-000-XX"],["Date *","date","JJ/MM ou JJ/MM/AAAA"],["Type","type",null,["SUIVI","IMPACTAGE"]],["Prix (€)","prix","0"],["Commentaire","co","..."]]}
                 form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
                 cols="90px 100px 95px 1fr 75px 1fr 130px" heads={["DATE","IMMAT","SOC","CHAUFFEUR","TYPE","COMMENTAIRE",""]}
                 rr={(s:any)=><><span style={{color:"#777",fontSize:11,fontFamily:"'IBM Plex Mono',monospace"}}>{s.date||"—"}</span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{s.im}</span><span><SocBadge s={s.soc}/></span><span style={{color:"#444"}}>{s.ch||"—"}</span><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,background:s.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52",display:"inline-block",justifySelf:"start"}}>{s.type==="IMPACTAGE"?`IMPACTAGE · ${Number(s.prix||0).toFixed(2)}€`:"SUIVI"}</span><span style={{color:"#999",fontSize:11}}>{s.co||"—"}</span></>}
