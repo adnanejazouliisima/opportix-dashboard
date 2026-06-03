@@ -119,6 +119,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [suiviOpen,setSuiviOpen]=useState(false);
   const [markingSuivi,setMarkingSuivi]=useState<string|null>(null);
   const [suiviDateDraft,setSuiviDateDraft]=useState("");
+  const [suiviSearch,setSuiviSearch]=useState("");
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
   const [newMsg,setNewMsg]=useState("");
@@ -658,11 +659,17 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                     <div style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>Suivis en retard</div>
                     <div style={{fontSize:10,color:"#888",marginTop:2}}>Vehicules sans suivi depuis &gt; 30 jours</div>
                   </div>
-                  <button onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                  <button onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);setSuiviSearch("");}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>X</button>
                 </div>
-                {overdueList.length===0?(
-                  <div style={{padding:30,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun vehicule en retard 🎉</div>
-                ):overdueList.map((v:any)=>{
+                <div style={{padding:"8px 14px",borderBottom:"1px solid #EDEDEB",background:"#fff"}}>
+                  <input value={suiviSearch} onChange={e=>setSuiviSearch(e.target.value)} placeholder="Rechercher (immat, chauffeur, modele...)" style={{...iS,width:"100%",fontSize:11,padding:"5px 8px"}}/>
+                </div>
+                {(()=>{
+                  const q=suiviSearch.trim().toLowerCase();
+                  const filtered=q?overdueList.filter((v:any)=>(v.im||"").toLowerCase().includes(q)||(v.ch||"").toLowerCase().includes(q)||(v.mq||"").toLowerCase().includes(q)||(v.mo||"").toLowerCase().includes(q)||(v.le||"").toLowerCase().includes(q)):overdueList;
+                  if(overdueList.length===0) return <div style={{padding:30,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun vehicule en retard 🎉</div>;
+                  if(filtered.length===0) return <div style={{padding:20,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun resultat pour "{suiviSearch}"</div>;
+                  return filtered.map((v:any)=>{
                   const ds=daysSince(v.vs);
                   const isMarking=markingSuivi===v.im;
                   const lateDays=ds===Infinity?null:Math.max(0,ds-30);
@@ -689,7 +696,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                       ))}
                     </div>
                   );
-                })}
+                });
+                })()}
               </div>
             </>)}
           </div>
