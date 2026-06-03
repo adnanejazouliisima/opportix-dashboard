@@ -116,9 +116,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [vp,setVp]=useState<number>(0);
   const [editingVp,setEditingVp]=useState(false);
   const [vpDraft,setVpDraft]=useState("0");
+  const [suivis,setSuivis]=useState<any[]>([]);
   const [suiviOpen,setSuiviOpen]=useState(false);
   const [markingSuivi,setMarkingSuivi]=useState<string|null>(null);
   const [suiviDateDraft,setSuiviDateDraft]=useState("");
+  const [suiviTypeDraft,setSuiviTypeDraft]=useState<"SUIVI"|"IMPACTAGE">("SUIVI");
+  const [suiviCommentDraft,setSuiviCommentDraft]=useState("");
+  const [suiviPrixDraft,setSuiviPrixDraft]=useState("");
   const [suiviSearch,setSuiviSearch]=useState("");
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
@@ -213,6 +217,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(data.rpv) setRpvs(data.rpv);
         if(data.msgs) setMsgs(data.msgs);
         if(typeof data.vp==='number') setVp(data.vp);
+        if(data.suivis) setSuivis(data.suivis);
         // Save synced fleet if vehicles were added
         if(changed){
           savingRef.current=true;setSaving(true);
@@ -269,16 +274,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
     // Patch save: n'envoyer QUE les cles explicitement passees pour eviter d'ecraser
     // les modifications faites par d'autres utilisateurs (le serveur fait un $set partiel).
-    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs','vp'] as const;
+    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs','vp','suivis'] as const;
     const d:any={};
     for(const k of validKeys){ if(k in o) d[k]=o[k]; }
     if(Object.keys(d).length===0) return;
     // Snapshot previous state for rollback (uniquement les cles modifiees).
     const prev:any={};
-    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs,vp};
+    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs,vp,suivis};
     for(const k of Object.keys(d)) prev[k]=cur[k];
     savingRef.current=true;setSaving(true);saveGenRef.current++;
-    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs,vp:setVp};
+    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs,vp:setVp,suivis:setSuivis};
     const rollback=()=>{for(const k of Object.keys(prev)) setters[k](prev[k]);};
     try{
       const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
@@ -305,6 +310,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   })();
   const dPros=isHistorical?(snapshotData?.pr||[]):pros;
   const dVp=isHistorical?(typeof snapshotData?.vp==='number'?snapshotData.vp:0):vp;
+  const dSuivis=isHistorical?(snapshotData?.suivis||[]):suivis;
   const dDpvs=isHistorical?(snapshotData?.dpv||[]):dpvs;
   const dRpvs=isHistorical?(snapshotData?.rpv||[]):rpvs;
   const dMsgs=isHistorical?(snapshotData?.msgs||[]):msgs;
@@ -314,25 +320,34 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const nGA=dGreen.filter(v=>v.st==="ACTIF").length, nGI=dGreen.filter(v=>v.st==="IMMO").length;
   const nCh=all.filter(v=>v.st==="ACTIF").length;
 
-  // Suivi: chaque vehicule a un champ vs (date du dernier suivi, format YYYY-MM-DD).
-  // Apres 30 jours sans suivi, il apparait dans la cloche de notif avec le nb de jours de retard.
+  // Suivi: chaque entree dans `suivis` est {id,im,date,type,co,prix,...}.
+  // La derniere date pour un immatricule = date du suivi le plus recent (fallback sur v.vs legacy).
+  // Apres 30 jours sans suivi, le vehicule apparait dans la cloche avec son nb de jours de retard.
   const todayISO=new Date().toISOString().slice(0,10);
-  const daysSince=(vs?:string)=>{
-    if(!vs) return Infinity;
-    const d=new Date(vs);
+  const daysSince=(date?:string)=>{
+    if(!date) return Infinity;
+    const d=new Date(date);
     if(isNaN(d.getTime())) return Infinity;
     return Math.floor((new Date(todayISO).getTime()-d.getTime())/86400000);
   };
+  const lastSuiviDate=(im:string,fallback?:string)=>{
+    let max:string|undefined=undefined;
+    for(const s of suivis){if(s.im===im&&s.date&&(!max||s.date>max)) max=s.date;}
+    return max||fallback;
+  };
   // Liste basee sur les donnees LIVE (jamais les snapshots) pour que la cloche reflete l'etat actuel.
-  const liveAll=[...urban.map(v=>({...v,soc:"URBAN NEO"})),...green.map(v=>({...v,soc:"GREEN"}))];
-  const overdueList=liveAll.filter(v=>daysSince(v.vs)>30).sort((a,b)=>daysSince(b.vs)-daysSince(a.vs));
+  const liveAll=[...urban.map(v=>({...v,soc:"URBAN NEO",_last:lastSuiviDate(v.im,v.vs)})),...green.map(v=>({...v,soc:"GREEN",_last:lastSuiviDate(v.im,v.vs)}))];
+  const overdueList=liveAll.filter(v=>daysSince(v._last)>30).sort((a,b)=>daysSince(b._last)-daysSince(a._last));
   const overdueCount=overdueList.length;
-  const markSuivi=(im:string,date:string)=>{
+  const markSuivi=(im:string,date:string,type:"SUIVI"|"IMPACTAGE",comment:string,prix:number)=>{
     if(isHistorical) return;
     const inU=urban.find((v:any)=>v.im===im);
-    if(inU){const upd=urban.map((v:any)=>v.im===im?{...v,vs:date}:v);setUrban(upd);sv({u:upd});}
-    else{const upd=green.map((v:any)=>v.im===im?{...v,vs:date}:v);setGreen(upd);sv({g:upd});}
-    setMarkingSuivi(null);setSuiviDateDraft("");
+    const veh=inU||green.find((v:any)=>v.im===im);
+    const entry={id:uid(),im,soc:inU?"URBAN NEO":"GREEN",ch:veh?.ch||"",mo:veh?.mo||"",date,type,co:comment||"",prix:type==="IMPACTAGE"?prix:0};
+    const newSuivis=[...suivis,entry];
+    setSuivis(newSuivis);
+    sv({suivis:newSuivis});
+    setMarkingSuivi(null);setSuiviDateDraft("");setSuiviTypeDraft("SUIVI");setSuiviCommentDraft("");setSuiviPrixDraft("");
   };
 
   const cur=fTab==="urban"?dUrban:dGreen;
@@ -343,7 +358,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
 
   const add=(type:string,entry:any,extra:any={})=>{
     if(isHistorical) return;
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"],suivis:[suivis,setSuivis,"suivis"]};
     const[arr,set,k]=m[type];
     const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=[...arr,(type==="urban"||type==="green")?{...entry}:{...entry,id:uid()}];
@@ -461,6 +476,19 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         setUrban(nu);setGreen(ng);setDisp(nd);
         sv({u:nu,g:ng,[k]:n,di:nd,...extra});
       }else{sv({[k]:n,...extra});}
+    }else if(type==="suivis"&&entry.im){
+      // Enrichir la nouvelle entree avec soc/ch/mo du vehicule + normaliser type/prix
+      const im=entry.im.toUpperCase().trim();
+      const inU=urban.find((v:any)=>v.im===im);
+      const inG=green.find((v:any)=>v.im===im);
+      const veh=inU||inG;
+      if(!veh){setToast({msg:`Vehicule ${im} introuvable dans la flotte`,type:"err"});setShowAdd(null);setForm({});return;}
+      const lastIdx=n.length-1;
+      const norm={...n[lastIdx],im,soc:inU?"URBAN NEO":"GREEN",ch:veh.ch||"",mo:n[lastIdx].mo||veh.mo||"",prix:parseFloat(String(n[lastIdx].prix||0))||0,type:(n[lastIdx].type||"SUIVI").toUpperCase()};
+      if(norm.type!=="IMPACTAGE") norm.prix=0;
+      const fixed=[...n.slice(0,lastIdx),norm];
+      set(fixed);
+      sv({[k]:fixed,...extra});
     }else{
       sv({[k]:n,...extra});
     }
@@ -468,7 +496,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
   const edit=(type:string,id:any,updated:any)=>{
     if(isHistorical) return;
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"],suivis:[suivis,setSuivis,"suivis"]};
     const[arr,set,k]=m[type];
     const sortByDate=(a:any)=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,mm]=d.split("/").map(Number);return(mm||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
     const n=arr.map((d:any)=>d.id===id?{...d,...updated,im:updated.im?.toUpperCase().trim()||d.im}:d);
@@ -502,7 +530,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
   const del=(type:string,id:any,isIdx?:boolean)=>{
     if(isHistorical) return;
-    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"]};
+    const m:any={urban:[urban,setUrban,"u"],green:[green,setGreen,"g"],garage:[garage,setGarage,"ga"],deps:[deps,setDeps,"dep"],rets:[rets,setRets,"ret"],disp:[disp,setDisp,"di"],vacs:[vacs,setVacs,"va"],pros:[pros,setPros,"pr"],dpvs:[dpvs,setDpvs,"dpv"],rpvs:[rpvs,setRpvs,"rpv"],suivis:[suivis,setSuivis,"suivis"]};
     const[arr,set,k]=m[type];
     const item=isIdx?arr[id]:arr.find((d:any)=>d.id===id);
     // Archive before deleting
@@ -592,7 +620,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     setNewMsg("");
   };
 
-  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"messagerie",l:"Messagerie"}];
+  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"},{k:"messagerie",l:"Messagerie"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
 
@@ -670,30 +698,53 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                   if(overdueList.length===0) return <div style={{padding:30,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun vehicule en retard 🎉</div>;
                   if(filtered.length===0) return <div style={{padding:20,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun resultat pour "{suiviSearch}"</div>;
                   return filtered.map((v:any)=>{
-                  const ds=daysSince(v.vs);
+                  const ds=daysSince(v._last);
                   const isMarking=markingSuivi===v.im;
                   const lateDays=ds===Infinity?null:Math.max(0,ds-30);
                   return (
-                    <div key={v.im} style={{padding:"8px 14px",borderBottom:"1px solid #F5F5F3",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <SocBadge s={v.soc}/>
-                          <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,color:"#1A1A1A"}}>{v.im}</span>
+                    <div key={v.im} style={{borderBottom:"1px solid #F5F5F3"}}>
+                      <div style={{padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <SocBadge s={v.soc}/>
+                            <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,color:"#1A1A1A"}}>{v.im}</span>
+                          </div>
+                          <div style={{fontSize:10,color:"#666",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"} · {v.mo||"—"}</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"#C0392B",marginTop:2}}>
+                            {ds===Infinity?"Jamais suivi":`${lateDays} jour${lateDays&&lateDays>1?"s":""} de retard`}
+                          </div>
                         </div>
-                        <div style={{fontSize:10,color:"#666",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"} · {v.mo||"—"}</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"#C0392B",marginTop:2}}>
-                          {ds===Infinity?"Jamais suivi":`${lateDays} jour${lateDays&&lateDays>1?"s":""} de retard`}
-                        </div>
+                        {!isHistorical&&displayUser.role!=='lecteur'&&!isMarking&&(
+                          <button onClick={()=>{setMarkingSuivi(v.im);setSuiviDateDraft(todayISO);setSuiviTypeDraft("SUIVI");setSuiviCommentDraft("");setSuiviPrixDraft("");}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid #2FAA6B",background:"#fff",color:"#2FAA6B",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Marquer suivi</button>
+                        )}
                       </div>
-                      {!isHistorical&&displayUser.role!=='lecteur'&&(isMarking?(
-                        <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                          <input type="date" value={suiviDateDraft} onChange={e=>setSuiviDateDraft(e.target.value)} style={{...iS,fontSize:10,padding:"3px 5px",width:120}}/>
-                          <button onClick={()=>{if(suiviDateDraft)markSuivi(v.im,suiviDateDraft);}} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
-                          <button onClick={()=>{setMarkingSuivi(null);setSuiviDateDraft("");}} style={{padding:"3px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                      {isMarking&&(
+                        <div style={{padding:"8px 14px 12px",background:"#FAFAF8",display:"flex",flexDirection:"column",gap:6}}>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            <span style={{fontSize:9,fontWeight:700,color:"#888",width:60}}>TYPE</span>
+                            <button onClick={()=>setSuiviTypeDraft("SUIVI")} style={{padding:"3px 10px",borderRadius:4,border:`1px solid ${suiviTypeDraft==="SUIVI"?"#2FAA6B":"#E0E0DE"}`,background:suiviTypeDraft==="SUIVI"?"#2FAA6B":"#fff",color:suiviTypeDraft==="SUIVI"?"#fff":"#666",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Suivi</button>
+                            <button onClick={()=>setSuiviTypeDraft("IMPACTAGE")} style={{padding:"3px 10px",borderRadius:4,border:`1px solid ${suiviTypeDraft==="IMPACTAGE"?"#C0392B":"#E0E0DE"}`,background:suiviTypeDraft==="IMPACTAGE"?"#C0392B":"#fff",color:suiviTypeDraft==="IMPACTAGE"?"#fff":"#666",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Impactage</button>
+                          </div>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            <span style={{fontSize:9,fontWeight:700,color:"#888",width:60}}>DATE</span>
+                            <input type="date" value={suiviDateDraft} onChange={e=>setSuiviDateDraft(e.target.value)} style={{...iS,fontSize:10,padding:"3px 5px",flex:1}}/>
+                          </div>
+                          {suiviTypeDraft==="IMPACTAGE"&&(
+                            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                              <span style={{fontSize:9,fontWeight:700,color:"#888",width:60}}>PRIX (€)</span>
+                              <input type="number" min={0} step="0.01" value={suiviPrixDraft} onChange={e=>setSuiviPrixDraft(e.target.value)} placeholder="0" style={{...iS,fontSize:10,padding:"3px 5px",flex:1}}/>
+                            </div>
+                          )}
+                          <div style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                            <span style={{fontSize:9,fontWeight:700,color:"#888",width:60,marginTop:4}}>COMMENT</span>
+                            <textarea value={suiviCommentDraft} onChange={e=>setSuiviCommentDraft(e.target.value)} placeholder="Commentaire optionnel" rows={2} style={{...iS,fontSize:10,padding:"3px 5px",flex:1,fontFamily:"inherit",resize:"vertical"}}/>
+                          </div>
+                          <div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:2}}>
+                            <button onClick={()=>{setMarkingSuivi(null);setSuiviDateDraft("");setSuiviCommentDraft("");setSuiviPrixDraft("");setSuiviTypeDraft("SUIVI");}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+                            <button onClick={()=>{if(!suiviDateDraft)return;const px=parseFloat(suiviPrixDraft)||0;markSuivi(v.im,suiviDateDraft,suiviTypeDraft,suiviCommentDraft.trim(),px);}} style={{padding:"4px 12px",borderRadius:5,border:"none",background:"#1E8A52",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Enregistrer</button>
+                          </div>
                         </div>
-                      ):(
-                        <button onClick={()=>{setMarkingSuivi(v.im);setSuiviDateDraft(todayISO);}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid #2FAA6B",background:"#fff",color:"#2FAA6B",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Marquer suivi</button>
-                      ))}
+                      )}
                     </div>
                   );
                 });
@@ -1016,6 +1067,26 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           cols="1fr 80px 90px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","NOTE",""]}
           rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
+        {tab==="suivis"&&(()=>{
+          const sortedSuivis=[...dSuivis].sort((a:any,b:any)=>(b.date||"").localeCompare(a.date||""));
+          const totalImpactage=sortedSuivis.filter((s:any)=>s.type==="IMPACTAGE").reduce((sum:number,s:any)=>sum+(Number(s.prix)||0),0);
+          const nbImpactage=sortedSuivis.filter((s:any)=>s.type==="IMPACTAGE").length;
+          return (
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <Pill c="#2FAA6B" t={`${sortedSuivis.length} suivi${sortedSuivis.length>1?"s":""}`}/>
+                <Pill c="#C0392B" t={`${nbImpactage} impactage${nbImpactage>1?"s":""}`}/>
+                <Pill c="#E8633A" t={`${totalImpactage.toFixed(2)} € total impactage`}/>
+              </div>
+              <CrudP title="Historique des suivis" color="#2FAA6B" data={sortedSuivis} type="suivis" showAdd={showAdd} setShowAdd={setShowAdd}
+                fields={[["Immat *","im","XX-000-XX"],["Date *","date","YYYY-MM-DD"],["Type","type",null,["SUIVI","IMPACTAGE"]],["Prix (€)","prix","0"],["Commentaire","co","..."]]}
+                form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
+                cols="90px 100px 95px 1fr 75px 1fr 130px" heads={["DATE","IMMAT","SOC","CHAUFFEUR","TYPE","COMMENTAIRE",""]}
+                rr={(s:any)=><><span style={{color:"#777",fontSize:11,fontFamily:"'IBM Plex Mono',monospace"}}>{s.date||"—"}</span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{s.im}</span><span><SocBadge s={s.soc}/></span><span style={{color:"#444"}}>{s.ch||"—"}</span><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,background:s.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52",display:"inline-block",justifySelf:"start"}}>{s.type==="IMPACTAGE"?`IMPACTAGE · ${Number(s.prix||0).toFixed(2)}€`:"SUIVI"}</span><span style={{color:"#999",fontSize:11}}>{s.co||"—"}</span></>}
+              />
+            </div>
+          );
+        })()}
         {tab==="messagerie"&&(
           <div className="ani">
             <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A",marginBottom:10}}>Messagerie inter-poles</div>

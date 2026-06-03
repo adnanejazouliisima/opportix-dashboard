@@ -233,14 +233,14 @@ app.get('/api/me', auth, (req, res) => {
 /* ═══ DATA ROUTES ═══ */
 app.get('/api/data', auth, async (req, res) => {
   const doc = await db.collection('data').findOne({ _key: 'fleet' });
-  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], dpv: [], rpv: [], msgs: [] });
+  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], dpv: [], rpv: [], msgs: [], suivis: [] });
   const { _id, _key, ...data } = doc;
   res.json(data);
 });
 
 app.put('/api/data', auth, canEdit, async (req, res) => {
   const d = req.body;
-  const arrayKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs'];
+  const arrayKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs', 'suivis'];
   const numberKeys = ['vp'];
   const validKeys = [...arrayKeys, ...numberKeys];
   if (!d || typeof d !== 'object' || Array.isArray(d)) {
