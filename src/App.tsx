@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
+import { Bell } from "lucide-react";
 import { Toast, Pill, Sel, StBadge, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
 import logoUrl from "./assets/logo.jpeg";
 
@@ -115,6 +116,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [vp,setVp]=useState<number>(0);
   const [editingVp,setEditingVp]=useState(false);
   const [vpDraft,setVpDraft]=useState("0");
+  const [suiviOpen,setSuiviOpen]=useState(false);
+  const [markingSuivi,setMarkingSuivi]=useState<string|null>(null);
+  const [suiviDateDraft,setSuiviDateDraft]=useState("");
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
   const [newMsg,setNewMsg]=useState("");
@@ -308,6 +312,27 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const nUA=dUrban.filter(v=>v.st==="ACTIF").length, nUI=dUrban.filter(v=>v.st==="IMMO").length;
   const nGA=dGreen.filter(v=>v.st==="ACTIF").length, nGI=dGreen.filter(v=>v.st==="IMMO").length;
   const nCh=all.filter(v=>v.st==="ACTIF").length;
+
+  // Suivi: chaque vehicule a un champ vs (date du dernier suivi, format YYYY-MM-DD).
+  // Apres 30 jours sans suivi, il apparait dans la cloche de notif avec le nb de jours de retard.
+  const todayISO=new Date().toISOString().slice(0,10);
+  const daysSince=(vs?:string)=>{
+    if(!vs) return Infinity;
+    const d=new Date(vs);
+    if(isNaN(d.getTime())) return Infinity;
+    return Math.floor((new Date(todayISO).getTime()-d.getTime())/86400000);
+  };
+  // Liste basee sur les donnees LIVE (jamais les snapshots) pour que la cloche reflete l'etat actuel.
+  const liveAll=[...urban.map(v=>({...v,soc:"URBAN NEO"})),...green.map(v=>({...v,soc:"GREEN"}))];
+  const overdueList=liveAll.filter(v=>daysSince(v.vs)>30).sort((a,b)=>daysSince(b.vs)-daysSince(a.vs));
+  const overdueCount=overdueList.length;
+  const markSuivi=(im:string,date:string)=>{
+    if(isHistorical) return;
+    const inU=urban.find((v:any)=>v.im===im);
+    if(inU){const upd=urban.map((v:any)=>v.im===im?{...v,vs:date}:v);setUrban(upd);sv({u:upd});}
+    else{const upd=green.map((v:any)=>v.im===im?{...v,vs:date}:v);setGreen(upd);sv({g:upd});}
+    setMarkingSuivi(null);setSuiviDateDraft("");
+  };
 
   const cur=fTab==="urban"?dUrban:dGreen;
   const filt=useMemo(()=>cur.filter(v=>{
@@ -620,6 +645,54 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <span className="header-pills" style={{display:"flex",gap:6}}><Pill c="#1A1A1A" t={`${all.length} VH`}/><Pill c="#2FAA6B" t={`${nUA+nGA} actifs`}/><Pill c="#7B61FF" t={`${nCh} chauffeurs`}/></span>
+          <div style={{position:"relative"}}>
+            <button onClick={()=>setSuiviOpen(o=>!o)} title={`${overdueCount} vehicule${overdueCount>1?"s":""} en retard de suivi`} style={{position:"relative",padding:"5px 7px",borderRadius:6,border:"1px solid #E0E0DE",background:"#fff",cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",color:overdueCount>0?"#C0392B":"#777"}}>
+              <Bell size={16}/>
+              {overdueCount>0&&<span style={{position:"absolute",top:-5,right:-5,minWidth:16,height:16,padding:"0 4px",borderRadius:8,background:"#C0392B",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'IBM Plex Mono',monospace"}}>{overdueCount}</span>}
+            </button>
+            {suiviOpen&&(<>
+              <div onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);}} style={{position:"fixed",inset:0,zIndex:9990}}/>
+              <div style={{position:"absolute",top:"calc(100% + 6px)",right:0,width:380,maxHeight:480,overflowY:"auto",background:"#fff",border:"1px solid #E5E5E3",borderRadius:8,boxShadow:"0 6px 24px rgba(0,0,0,0.12)",zIndex:9991}}>
+                <div style={{padding:"10px 14px",borderBottom:"1px solid #EDEDEB",background:"#FAFAF8",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>Suivis en retard</div>
+                    <div style={{fontSize:10,color:"#888",marginTop:2}}>Vehicules sans suivi depuis &gt; 30 jours</div>
+                  </div>
+                  <button onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                </div>
+                {overdueList.length===0?(
+                  <div style={{padding:30,textAlign:"center",color:"#BBB",fontSize:11}}>Aucun vehicule en retard 🎉</div>
+                ):overdueList.map((v:any)=>{
+                  const ds=daysSince(v.vs);
+                  const isMarking=markingSuivi===v.im;
+                  const lateDays=ds===Infinity?null:Math.max(0,ds-30);
+                  return (
+                    <div key={v.im} style={{padding:"8px 14px",borderBottom:"1px solid #F5F5F3",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <SocBadge s={v.soc}/>
+                          <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,color:"#1A1A1A"}}>{v.im}</span>
+                        </div>
+                        <div style={{fontSize:10,color:"#666",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"} · {v.mo||"—"}</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"#C0392B",marginTop:2}}>
+                          {ds===Infinity?"Jamais suivi":`${lateDays} jour${lateDays&&lateDays>1?"s":""} de retard`}
+                        </div>
+                      </div>
+                      {!isHistorical&&displayUser.role!=='lecteur'&&(isMarking?(
+                        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                          <input type="date" value={suiviDateDraft} onChange={e=>setSuiviDateDraft(e.target.value)} style={{...iS,fontSize:10,padding:"3px 5px",width:120}}/>
+                          <button onClick={()=>{if(suiviDateDraft)markSuivi(v.im,suiviDateDraft);}} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
+                          <button onClick={()=>{setMarkingSuivi(null);setSuiviDateDraft("");}} style={{padding:"3px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>X</button>
+                        </div>
+                      ):(
+                        <button onClick={()=>{setMarkingSuivi(v.im);setSuiviDateDraft(todayISO);}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid #2FAA6B",background:"#fff",color:"#2FAA6B",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Marquer suivi</button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </>)}
+          </div>
           <div className="hide-mobile" style={{width:1,height:16,background:"#E5E5E3",margin:"0 4px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div className="user-avatar" style={{width:24,height:24,borderRadius:"50%",background:"#1A1A1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{user.displayName.charAt(0)}</div>
