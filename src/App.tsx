@@ -56,8 +56,6 @@ function LoginPage({onLogin}:any){
 
 /* ═══ DATA ═══ */
 
-const POLES={activite:{n:"Activite",c:"#E8633A"},parc:{n:"Parc",c:"#3A9BD5"},commercial:{n:"Commercial",c:"#2FAA6B"}};
-
 const API_URL = "";
 const uid=()=>crypto.randomUUID();
 
@@ -112,7 +110,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [pros,setPros]=useState<any[]>([]);
   const [dpvs,setDpvs]=useState<any[]>([]);
   const [rpvs,setRpvs]=useState<any[]>([]);
-  const [msgs,setMsgs]=useState<any[]>([]);
   const [vp,setVp]=useState<number>(0);
   const [editingVp,setEditingVp]=useState(false);
   const [vpDraft,setVpDraft]=useState("0");
@@ -126,8 +123,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [suiviSearch,setSuiviSearch]=useState("");
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
-  const [newMsg,setNewMsg]=useState("");
-  const [msgTo,setMsgTo]=useState("all");
   const [fTab,setFTab]=useState("urban");
   const [search,setSearch]=useState("");
   const [delC,setDelC]=useState<string|null>(null);
@@ -136,7 +131,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [usersList, setUsersList] = useState<any[]>([]);
   const [history,setHistory]=useState<any>({});
   const [histSearch,setHistSearch]=useState("");
-  const ce=useRef<HTMLDivElement>(null);
   const savingRef=useRef(false);
   // Incremented on every save start. Un GET en vol qui termine apres un save voit son
   // generation perimee et n'applique pas son resultat (sinon il ecraserait la modif locale).
@@ -150,8 +144,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   // Force read-only role when viewing a past week so child components hide write buttons.
   const displayUser=isHistorical?{...user,role:"lecteur"}:user;
 
-  useEffect(()=>{ce.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
-  
   // Charge les données depuis l'API
   const loadDataFromAPI=async()=>{
     if(savingRef.current) return;
@@ -215,14 +207,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         if(data.pr) setPros(data.pr);
         if(data.dpv) setDpvs(data.dpv);
         if(data.rpv) setRpvs(data.rpv);
-        if(data.msgs) setMsgs(data.msgs);
         if(typeof data.vp==='number') setVp(data.vp);
         if(data.suivis) setSuivis(data.suivis);
         // Save synced fleet if vehicles were added
         if(changed){
           savingRef.current=true;setSaving(true);
           try{
-            await fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr,msgs:data.msgs})});
+            await fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr})});
           }catch(e){console.error("Sync save error:",e);}
           finally{savingRef.current=false;setSaving(false);}
         }
@@ -274,16 +265,16 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour modifier",type:"err"});return;}
     // Patch save: n'envoyer QUE les cles explicitement passees pour eviter d'ecraser
     // les modifications faites par d'autres utilisateurs (le serveur fait un $set partiel).
-    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','msgs','vp','suivis'] as const;
+    const validKeys=['u','g','ga','dep','ret','di','va','pr','dpv','rpv','vp','suivis'] as const;
     const d:any={};
     for(const k of validKeys){ if(k in o) d[k]=o[k]; }
     if(Object.keys(d).length===0) return;
     // Snapshot previous state for rollback (uniquement les cles modifiees).
     const prev:any={};
-    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,msgs,vp,suivis};
+    const cur:any={u:urban,g:green,ga:garage,dep:deps,ret:rets,di:disp,va:vacs,pr:pros,dpv:dpvs,rpv:rpvs,vp,suivis};
     for(const k of Object.keys(d)) prev[k]=cur[k];
     savingRef.current=true;setSaving(true);saveGenRef.current++;
-    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,msgs:setMsgs,vp:setVp,suivis:setSuivis};
+    const setters:any={u:setUrban,g:setGreen,ga:setGarage,dep:setDeps,ret:setRets,di:setDisp,va:setVacs,pr:setPros,dpv:setDpvs,rpv:setRpvs,vp:setVp,suivis:setSuivis};
     const rollback=()=>{for(const k of Object.keys(prev)) setters[k](prev[k]);};
     try{
       const res=await fetch('/api/data', { method:'PUT', headers, body: JSON.stringify(d) });
@@ -313,7 +304,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const dSuivis=isHistorical?(snapshotData?.suivis||[]):suivis;
   const dDpvs=isHistorical?(snapshotData?.dpv||[]):dpvs;
   const dRpvs=isHistorical?(snapshotData?.rpv||[]):rpvs;
-  const dMsgs=isHistorical?(snapshotData?.msgs||[]):msgs;
 
   const all=[...dUrban.map(v=>({...v,soc:"URBAN NEO"})),...dGreen.map(v=>({...v,soc:"GREEN"}))];
   const nUA=dUrban.filter(v=>v.st==="ACTIF").length, nUI=dUrban.filter(v=>v.st==="IMMO").length;
@@ -636,17 +626,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     else{const n=up(green);setGreen(n);sv({g:n});}
   };
 
-  const sendM=()=>{
-    if(isHistorical){setToast({msg:"Lecture seule — retournez en direct pour envoyer",type:"err"});return;}
-    if(!newMsg.trim())return;
-    const msg = {id:uid(),fr:user.displayName,po:user.pole,to:msgTo,tx:newMsg,ti:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),ur:false};
-    const updated=[...msgs,msg];
-    setMsgs(updated);
-    sv({msgs:updated});
-    setNewMsg("");
-  };
-
-  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"},{k:"messagerie",l:"Messagerie"}];
+  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
 
@@ -1113,37 +1093,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
           );
         })()}
-        {tab==="messagerie"&&(
-          <div className="ani">
-            <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A",marginBottom:10}}>Messagerie inter-poles</div>
-            <div style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-              <div style={{padding:12,maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
-                {dMsgs.map(m=>(
-                  <div key={m.id} style={{display:"flex",gap:8,alignItems:"flex-start",padding:6,borderRadius:6,background:m.ur?"#FFF8F6":"transparent"}}>
-                    <div style={{width:28,height:28,borderRadius:"50%",background:(POLES as any)[m.po]?.c||"#999",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>{m.fr.charAt(0)}</div>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",gap:6,alignItems:"center",fontSize:11,flexWrap:"wrap"}}>
-                        <span style={{fontWeight:600,color:"#1A1A1A"}}>{m.fr}</span>
-                        <span style={{color:(POLES as any)[m.po]?.c,fontSize:10}}>{(POLES as any)[m.po]?.n}</span>
-                        <span style={{color:"#CCC",fontSize:10}}>{"→"} {m.to==="all"?"Tous":(POLES as any)[m.to]?.n}</span>
-                        <span style={{color:"#BBB",fontSize:9,marginLeft:"auto"}}>{m.ti}</span>
-                      </div>
-                      <div style={{color:"#444",lineHeight:1.4,fontSize:12}}>{m.tx}</div>
-                      {m.ur&&<span style={{fontSize:9,fontWeight:700,color:"#C0392B"}}>URGENT</span>}
-                    </div>
-                  </div>
-                ))}
-                <div ref={ce}/>
-              </div>
-              {!isHistorical&&<div style={{display:"flex",gap:6,padding:"8px 12px",borderTop:"1px solid #E5E5E3",background:"#FAFAF8",flexWrap:"wrap"}}>
-                <select value={msgTo} onChange={e=>setMsgTo(e.target.value)} style={{...iS,width:120,fontSize:11}}><option value="all">Tous</option><option value="activite">Activite</option><option value="parc">Parc</option><option value="commercial">Commercial</option></select>
-                <input value={newMsg} onChange={e=>setNewMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendM()} placeholder="Message..." style={{...iS,flex:1}}/>
-                <button onClick={sendM} style={{padding:"7px 16px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontWeight:600,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Envoyer</button>
-              </div>}
-            </div>
-          </div>
-        )}
-      
   {tab==="utilisateurs"&&(
     <div className="ani">
       <div style={{fontSize:13,fontWeight:700,color:"#1A1A1A",marginBottom:10}}>Gestion des Comptes</div>

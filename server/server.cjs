@@ -6,7 +6,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { MongoClient } = require('mongodb');
 const rateLimit = require('express-rate-limit');
-const crypto = require('crypto');
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
 
@@ -233,14 +232,14 @@ app.get('/api/me', auth, (req, res) => {
 /* ═══ DATA ROUTES ═══ */
 app.get('/api/data', auth, async (req, res) => {
   const doc = await db.collection('data').findOne({ _key: 'fleet' });
-  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], dpv: [], rpv: [], msgs: [], suivis: [] });
+  if (!doc) return res.json({ u: [], g: [], ga: [], dep: [], ret: [], di: [], va: [], pr: [], dpv: [], rpv: [], suivis: [] });
   const { _id, _key, ...data } = doc;
   res.json(data);
 });
 
 app.put('/api/data', auth, canEdit, async (req, res) => {
   const d = req.body;
-  const arrayKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'msgs', 'suivis'];
+  const arrayKeys = ['u', 'g', 'ga', 'dep', 'ret', 'di', 'va', 'pr', 'dpv', 'rpv', 'suivis'];
   const numberKeys = ['vp'];
   const validKeys = [...arrayKeys, ...numberKeys];
   if (!d || typeof d !== 'object' || Array.isArray(d)) {
@@ -272,21 +271,6 @@ app.put('/api/data', auth, canEdit, async (req, res) => {
   await db.collection('data').updateOne({ _key: 'fleet' }, { $set: d }, { upsert: true });
   await audit(req.user, 'data_update', { keys: Object.keys(d) });
   // Auto-update current week's snapshot on every save
-  takeSnapshot(req.user.username).catch(err => console.error('  ⚠️ Snapshot auto-save echec:', err.message));
-  broadcast();
-  res.json({ ok: true });
-});
-
-app.post('/api/data/message', auth, async (req, res) => {
-  const { tx } = req.body;
-  if (!tx || typeof tx !== 'string' || tx.length > 2000) {
-    return res.status(400).json({ error: 'Message invalide (max 2000 caracteres)' });
-  }
-  await db.collection('data').updateOne(
-    { _key: 'fleet' },
-    { $push: { msgs: { ...req.body, id: crypto.randomUUID() } } },
-    { upsert: true }
-  );
   takeSnapshot(req.user.username).catch(err => console.error('  ⚠️ Snapshot auto-save echec:', err.message));
   broadcast();
   res.json({ ok: true });
