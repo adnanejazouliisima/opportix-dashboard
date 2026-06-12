@@ -94,6 +94,12 @@ const vacStarted=(deb?:string)=>{
   const today=(t.getMonth()+1)*100+t.getDate();
   return kd<=today?today-kd<600:kd-today>600;
 };
+// Tri vehicules : IMMO toujours en haut, puis par marque+modele (memes modeles groupes), puis immat.
+const sortVeh=(a:any[])=>[...a].sort((x:any,y:any)=>{
+  const xi=x.st==="IMMO"?0:1,yi=y.st==="IMMO"?0:1;
+  if(xi!==yi) return xi-yi;
+  return `${x.mq||""} ${x.mo||""}`.trim().localeCompare(`${y.mq||""} ${y.mo||""}`.trim())||(x.im||"").localeCompare(y.im||"");
+});
 
 interface AppUser {
   id: string;
@@ -918,7 +924,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 );
               })()}
             </div>
-
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${dDisp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${dDisp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
                 heads={["SOCIETE","IMMAT","MODELE","NOTE"]} cols="65px 90px 1fr 1fr" data={dDisp} maxH={160}
@@ -981,7 +986,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
           </div>
         )}
-
         {tab==="vehicules"&&(
           <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -991,18 +995,17 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               </div>
             </div>
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <MiniTbl title="VEHICULES URBAN NEO" titleBg="#D6E9F8" count={`${urban.length} voitures`} countBad={nUI>0?`${nUI} a l'arret`:null}
-                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={urban} maxH={500}
+              <MiniTbl title="VEHICULES URBAN NEO" titleBg="#D6E9F8" count={`${dUrban.length} voitures`} countBad={nUI>0?`${nUI} a l'arret`:null}
+                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={sortVeh(dUrban)} maxH={500}
                 renderRow={(v:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,color:"#1A1A1A",fontSize:10}}>{v.im}</span><span style={{color:"#666"}}>{v.mq}</span><span style={{color:"#666"}}>{v.mo}</span><span style={{color:"#999",fontSize:10}}>{v.le||"—"}</span><StBadge s={v.st}/><span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span></>}
               />
-              <MiniTbl title="VEHICULES GREEN" titleBg="#D4F0E0" count={`${green.length} voitures`} countBad={nGI>0?`${nGI} a l'arret`:null}
-                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={green} maxH={500}
+              <MiniTbl title="VEHICULES GREEN" titleBg="#D4F0E0" count={`${dGreen.length} voitures`} countBad={nGI>0?`${nGI} a l'arret`:null}
+                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={sortVeh(dGreen)} maxH={500}
                 renderRow={(v:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,color:"#1A1A1A",fontSize:10}}>{v.im}</span><span style={{color:"#666"}}>{v.mq}</span><span style={{color:"#666"}}>{v.mo}</span><span style={{color:"#999",fontSize:10}}>{v.le||"—"}</span><StBadge s={v.st}/><span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span></>}
               />
             </div>
           </div>
         )}
-
         {tab==="flotte"&&(
           <div className="ani">
             <div style={{display:"flex",gap:6,marginBottom:10}}>
@@ -1066,7 +1069,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
           </div>
         )}
-
         {tab==="departs"&&<CrudP title="Departs" color="#D94F3B" data={dDeps} type="deps" showAdd={showAdd} setShowAdd={setShowAdd}
           fields={[["Societe","soc",null,["URBAN NEO","GREEN"]],["Immat *","im","XX-000-XX"],["Modele","mo","BYD SEAL"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"],["Date","dt","JJ/MM"],["Note","no","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
@@ -1180,9 +1182,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       </div>
     </div>
   )}
-
       </main>
     </div>
   );
 }
-
