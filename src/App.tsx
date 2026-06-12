@@ -863,7 +863,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 {l:"GREEN",v:dGreen.length,c:"#2FAA6B",a:nGA,
                   dispo:dGreen.filter(v=>dDisp.find((d:any)=>d.im===v.im)).length,
                   gar:dGreen.filter(v=>dGarage.find((g:any)=>g.im===v.im)).length},
-                {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF",immo:nUI+nGI},
+                {l:"CHAUFFEURS ACTIFS",v:nCh,c:"#7B61FF",
+                  dispoT:all.filter(v=>dDisp.find((d:any)=>d.im===v.im)).length,
+                  garT:all.filter(v=>dGarage.find((g:any)=>g.im===v.im)).length},
               ].map((k:any,i:number)=>(
                 <div key={i} className="stat-card" style={{background:"#fff",borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${k.c}`,border:"1px solid #E5E5E3"}}>
                   <div className="stat-label" style={{fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,marginBottom:4}}>{k.l}</div>
@@ -876,11 +878,12 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                         <div style={{fontSize:13,fontWeight:800,color:"#C0392B"}}>{k.gar} GARAGE</div>
                       </div>
                     </div>
-                  ):k.immo!==undefined?(
+                  ):k.dispoT!==undefined?(
                     <div style={{display:"flex",alignItems:"center",gap:14}}>
                       <div className="stat-value" style={{fontSize:32,fontWeight:800,color:k.c,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1}}>{k.v}</div>
                       <div style={{display:"flex",flexDirection:"column",gap:2,fontFamily:"'IBM Plex Mono',monospace",lineHeight:1.1}}>
-                        <div style={{fontSize:15,fontWeight:800,color:"#C0392B"}}>{k.immo} IMMO</div>
+                        <div style={{fontSize:15,fontWeight:800,color:"#3A9BD5"}}>{k.dispoT} DISPO</div>
+                        <div style={{fontSize:13,fontWeight:800,color:"#C0392B"}}>{k.garT} GARAGE</div>
                       </div>
                     </div>
                   ):(
