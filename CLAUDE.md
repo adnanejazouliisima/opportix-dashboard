@@ -64,7 +64,7 @@ Frontend mirrors these as `useState` arrays/number with identical names (`urban`
 - **dispo** — vehicles available pool.
 - **garage** — vehicles in workshop; exit-from-garage button puts the vehicle back in dispo.
 - **historique** — per-driver history aggregated from current + archived deps/rets (via `/api/history`).
-- **vacances** — driver vacations, sorted by closest end date.
+- **vacances** — driver vacations, sorted by closest end date. Adding one releases the driver's car (IMMO/VACANCES + dispo) — immediately if `deb` is today/past, otherwise deferred: `loadDataFromAPI` applies the transition once the start date arrives, using an `applied` flag on the entry so it never replays (dates are `DD/MM`, see `vacStarted()`).
 - **suivis** — follow-up log (date, type, prix, commentaire); drives the header bell.
 - **utilisateurs** — visible only for `admin` / `editeur`; admin manages roles.
 

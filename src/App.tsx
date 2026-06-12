@@ -75,6 +75,25 @@ function weekDateRange(weekLabel:string){
   const fmt=(d:Date)=>`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
   return{from:fmt(monday),to:fmt(sunday)};
 }
+// "DD/MM" ou "DD/MM/YYYY" → cle mois*100+jour pour comparaison.
+const dmKey=(s?:string)=>{if(!s)return null;const p=s.trim().split("/").map(Number);return p[0]&&p[1]?p[1]*100+p[0]:null;};
+// Une vacance a commence si sa date de debut est atteinte. Sans date valide → consideree
+// commencee (comportement historique). Accepte DD/MM, DD/MM/YY et DD/MM/YYYY : avec annee
+// la comparaison est exacte ; sans annee, la fenetre de 6 mois gere le passage d'annee
+// (un debut en janvier saisi en decembre est bien futur, pas "passe depuis 11 mois").
+const vacStarted=(deb?:string)=>{
+  if(!deb) return true;
+  const p=deb.trim().split("/").map(Number);
+  if(!p[0]||!p[1]) return true;
+  const t=new Date();
+  if(p[2]){
+    const y=p[2]<100?2000+p[2]:p[2];
+    return new Date(y,p[1]-1,p[0]).getTime()<=new Date(t.getFullYear(),t.getMonth(),t.getDate()).getTime();
+  }
+  const kd=p[1]*100+p[0];
+  const today=(t.getMonth()+1)*100+t.getDate();
+  return kd<=today?today-kd<600:kd-today>600;
+};
 
 interface AppUser {
   id: string;
@@ -188,6 +207,32 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             changed=true;
           }
         });
+        // Vacances a debut differe : la voiture n'est liberee (IMMO/VACANCES + dispo) qu'une
+        // fois la date de debut atteinte. Le flag `applied` evite de rejouer la transition
+        // (sinon une voiture reassignee apres les vacances serait re-liberee a chaque reload).
+        let va=data.va||[],di=data.di||[];
+        let vaChanged=false;
+        va=va.map((vac:any)=>{
+          if(vac.applied||!vac.ch||!vacStarted(vac.deb)) return vac;
+          vaChanged=true;
+          // Vacance deja terminee (entrees historiques sans flag) : ne pas voler la voiture
+          // que le chauffeur a pu reprendre depuis — on flague sans rien toucher.
+          const kf=dmKey(vac.fin);
+          const t=new Date();const todayKey=(t.getMonth()+1)*100+t.getDate();
+          if(kf!==null&&kf!==todayKey&&vacStarted(vac.fin)) return {...vac,applied:true};
+          const chName=vac.ch.toUpperCase().trim();
+          const veh=[...u,...g].find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
+          if(veh){
+            const im=veh.im;
+            const inU=!!u.find((v:any)=>v.im===im);
+            const vehUpd={...veh,st:"IMMO",ch:"VACANCES"};
+            if(vac.soc==="GREEN"){u=u.filter((v:any)=>v.im!==im);g=g.find((v:any)=>v.im===im)?g.map((v:any)=>v.im===im?vehUpd:v):[...g,vehUpd];}
+            else if(vac.soc==="URBAN NEO"){g=g.filter((v:any)=>v.im!==im);u=inU?u.map((v:any)=>v.im===im?vehUpd:v):[...u,vehUpd];}
+            else{u=u.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);g=g.map((v:any)=>v.im===im?{...v,st:"IMMO",ch:"VACANCES"}:v);}
+            if(!di.find((d:any)=>d.im===im)) di=[...di,{im,soc:vac.soc||(inU?"URBAN NEO":"GREEN"),mo:veh.mo||"",ch:chName,no:`VACANCES ${vac.deb||""}-${vac.fin||""}`.trim(),id:uid()}];
+          }
+          return {...vac,applied:true};
+        });
         setUrban(u);setGreen(g);
         if(data.ga) setGarage(data.ga.map((it:any)=>{
           // Patch id manquant + deviner la societe à partir de la flotte si absente
@@ -202,18 +247,18 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         const sortByDate=(a:any[])=>[...a].sort((x:any,y:any)=>{const p=(d:string)=>{if(!d)return-1;const[j,m]=d.split("/").map(Number);return(m||0)*100+(j||0);};return p(y.dt)-p(x.dt);});
         if(data.dep) setDeps(sortByDate(depList));
         if(data.ret) setRets(sortByDate(data.ret));
-        if(data.di) setDisp(data.di);
-        if(data.va) setVacs(data.va);
+        if(data.di||vaChanged) setDisp(di);
+        if(data.va||vaChanged) setVacs(va);
         if(data.pr) setPros(data.pr);
         if(data.dpv) setDpvs(data.dpv);
         if(data.rpv) setRpvs(data.rpv);
         if(typeof data.vp==='number') setVp(data.vp);
         if(data.suivis) setSuivis(data.suivis);
-        // Save synced fleet if vehicles were added
-        if(changed){
+        // Save synced fleet if vehicles were added or a vacation transition was applied
+        if((changed||vaChanged)&&user.role!=='lecteur'){
           savingRef.current=true;setSaving(true);
           try{
-            await fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di:data.di,ga:data.ga,va:data.va,pr:data.pr})});
+            await fetch(`${API_URL}/api/data`,{method:'PUT',headers,body:JSON.stringify({u,g,dep:data.dep,ret:data.ret,di,ga:data.ga,va,pr:data.pr})});
           }catch(e){console.error("Sync save error:",e);}
           finally{savingRef.current=false;setSaving(false);}
         }
@@ -457,7 +502,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       setUrban(nu);setGreen(ng);
       sv({u:nu,g:ng,[k]:n,di:nd,...extra});
     }else if(type==="vacs"&&entry.ch){
+      // Debut dans le futur → la voiture reste au chauffeur ; loadDataFromAPI la liberera
+      // a la date de debut (voir flag `applied`).
+      if(!vacStarted(entry.deb)){
+        sv({[k]:n,...extra});
+      }else{
       // Vacances → trouver la voiture du chauffeur, la déplacer dans la flotte choisie, la mettre en dispo
+      const n2=n.map((it:any,i:number)=>i===n.length-1?{...it,applied:true}:it);
+      set(n2);
       const chName=entry.ch.toUpperCase().trim();
       const inUrban=urban.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
       const inGreen=green.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chName);
@@ -481,8 +533,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           ?disp
           :[...disp,{im,soc:entry.soc||veh.soc||"",mo:veh.mo||"",ch:chName,no:`VACANCES ${entry.deb||""}-${entry.fin||""}`.trim(),id:uid()}];
         setUrban(nu);setGreen(ng);setDisp(nd);
-        sv({u:nu,g:ng,[k]:n,di:nd,...extra});
-      }else{sv({[k]:n,...extra});}
+        sv({u:nu,g:ng,[k]:n2,di:nd,...extra});
+      }else{sv({[k]:n2,...extra});}
+      }
     }else if(type==="suivis"&&entry.im){
       // Enrichir la nouvelle entree avec soc/ch/mo du vehicule + normaliser type/prix/date
       const im=entry.im.toUpperCase().trim();
