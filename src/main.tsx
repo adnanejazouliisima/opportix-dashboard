@@ -8,3 +8,11 @@ createRoot(document.getElementById('app')!).render(
     <App />
   </StrictMode>,
 );
+
+// PWA : enregistrer le service worker uniquement en production (pas en dev Vite,
+// pour éviter tout cache pendant le développement).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

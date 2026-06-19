@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "node server/server.cjs",
-    "dev:full": "concurrently \"npm run dev\" \"node server/server.cjs\""
+    "dev:full": "concurrently \"npm run dev\" \"node server/server.cjs\"",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@types/react": "^19.2.14",
@@ -29,5 +30,8 @@
     "typescript": "~5.9.3",
     "uuid": "^13.0.0",
     "vite": "^8.0.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.1"
   }
 }
