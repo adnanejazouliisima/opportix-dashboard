@@ -685,6 +685,15 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     else{const n=up(green);setGreen(n);sv({g:n});}
   };
 
+  // Marqueur visuel "réservé" sur une voiture dispo (drapeau rsv). Purement cosmetique :
+  // la voiture reste en dispo, aucun statut ni cascade metier n'est touche. Match par
+  // reference (les items dispo legacy n'ont pas tous d'id).
+  const toggleReserve=(item:any)=>{
+    if(isHistorical||displayUser.role==='lecteur') return;
+    const n=disp.map((d:any)=>d===item?{...d,rsv:!d.rsv}:d);
+    setDisp(n);sv({di:n});
+  };
+
   const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
@@ -926,8 +935,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
             <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <DiffBlock title="VOITURES DISPO" titleBg="#D6E9F8" color="#3A9BD5" count={`${dDisp.filter((d:any)=>d.soc==="URBAN NEO").length} Urb · ${dDisp.filter((d:any)=>d.soc==="GREEN").length} Grn`}
-                heads={["SOCIETE","IMMAT","MODELE","NOTE"]} cols="65px 90px 1fr 1fr" data={dDisp} maxH={160}
-                renderRow={(d:any)=><><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.no||"—"}</span></>}
+                heads={["SOCIETE","IMMAT","MODELE","NOTE","RÉSERVÉ"]} cols="55px 80px 1fr 1fr 74px" data={dDisp} maxH={160}
+                renderRow={(d:any)=>{const reserved=!!d.rsv;const canToggle=!isHistorical&&displayUser.role!=='lecteur';return <><SocBadge s={d.soc}/><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600,color:reserved?"#B7791F":undefined}}>{reserved?"● ":""}{d.im}</span><span style={{color:"#444"}}>{d.mo||"—"}</span><span style={{color:"#999",fontSize:10}}>{d.no||"—"}</span><span>{reserved?(canToggle?<button onClick={()=>toggleReserve(d)} title="Cliquer pour libérer la réservation" style={{padding:"1px 6px",borderRadius:4,border:"none",background:"#FDF4E3",color:"#B7791F",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>RÉSERVÉ</button>:<span style={{padding:"1px 6px",borderRadius:4,background:"#FDF4E3",color:"#B7791F",fontSize:9,fontWeight:700}}>RÉSERVÉ</span>):(canToggle?<button onClick={()=>toggleReserve(d)} title="Marquer comme réservée à un chauffeur" style={{padding:"1px 6px",borderRadius:4,border:"1px solid #E0C68A",background:"#fff",color:"#B7791F",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Réserver</button>:<span style={{color:"#CCC",fontSize:9}}>—</span>)}</span></>;}}
                 formFields={[["soc","Societe",null,["URBAN NEO","GREEN"]],["im","Immat *","XX-000-XX"],["mo","Modele","KONA..."],["no","Note","..."]]}
                 onAdd={(f:any)=>{if(!f.im?.trim())return;add("disp",{...f,im:f.im.toUpperCase().trim()});}}
                 onDel={(id:any)=>del("disp",id)}
