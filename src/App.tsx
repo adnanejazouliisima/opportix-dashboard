@@ -146,6 +146,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [suiviCommentDraft,setSuiviCommentDraft]=useState("");
   const [suiviPrixDraft,setSuiviPrixDraft]=useState("");
   const [suiviSearch,setSuiviSearch]=useState("");
+  // Onglet Suivis remanié : split par societe, liste par vehicule + grille 6 mois depliable.
+  const [suiviTab,setSuiviTab]=useState<"urban"|"green">("urban");
+  const [suiviOpenIm,setSuiviOpenIm]=useState<string|null>(null);
+  const [chkForm,setChkForm]=useState<any>({type:"SUIVI"});
+  const [chkDel,setChkDel]=useState<string|null>(null);
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
   const [fTab,setFTab]=useState("urban");
@@ -1141,22 +1146,105 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
         />}
         {tab==="suivis"&&(()=>{
-          const sortedSuivis=[...dSuivis].sort((a:any,b:any)=>(b.date||"").localeCompare(a.date||""));
-          const totalImpactage=sortedSuivis.filter((s:any)=>s.type==="IMPACTAGE").reduce((sum:number,s:any)=>sum+(Number(s.prix)||0),0);
-          const nbImpactage=sortedSuivis.filter((s:any)=>s.type==="IMPACTAGE").length;
+          const FR_MONTHS=["JAN","FÉV","MAR","AVR","MAI","JUN","JUL","AOÛ","SEP","OCT","NOV","DÉC"];
+          const isoToFr=(iso?:string)=>{const m=(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:(iso||"—");};
+          const monthKeyOf=(s?:string)=>{const m=normalizeDate(s).match(/^(\d{4})-(\d{2})/);return m?`${m[1]}-${m[2]}`:"";};
+          const addMonthsIso=(iso:string,n:number)=>{const m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return"";const d=new Date(Number(m[1]),Number(m[2])-1+n,Number(m[3]));return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+          const now=new Date();
+          // Fenetre glissante : 3 mois passes + mois courant + 2 a venir (6 colonnes).
+          const months=[-3,-2,-1,0,1,2].map(off=>{const d=new Date(now.getFullYear(),now.getMonth()+off,1);return{key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,label:FR_MONTHS[d.getMonth()],yr:String(d.getFullYear()).slice(2),cur:off===0};});
+          const todayLocal=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+          const fleet=suiviTab==="urban"?dUrban:dGreen;
+          const soc=suiviTab==="urban"?"URBAN NEO":"GREEN";
+          const q=search.trim().toLowerCase();
+          const checksAll=dSuivis.filter((s:any)=>s.soc===soc);
+          const totalImpactage=checksAll.filter((s:any)=>s.type==="IMPACTAGE").reduce((a:number,s:any)=>a+(Number(s.prix)||0),0);
+          const nbImpactage=checksAll.filter((s:any)=>s.type==="IMPACTAGE").length;
+          const canEditChk=!isHistorical&&displayUser.role!=='lecteur';
+          const GRID="1fr 95px 105px 70px 90px 90px 90px 34px";
+          const rows=fleet
+            .filter((v:any)=>!q||(v.im||"").toLowerCase().includes(q)||(v.ch||"").toLowerCase().includes(q))
+            .map((v:any)=>{
+              const ch=dSuivis.filter((s:any)=>s.im===v.im).map((s:any)=>({...s,_iso:normalizeDate(s.date)})).sort((a:any,b:any)=>(b._iso||"").localeCompare(a._iso||""));
+              const last=ch[0];
+              const lastIso=last?last._iso:"";
+              const nextIso=last?addMonthsIso(lastIso,1):"";
+              return {v,ch,last,lastIso,nextIso,overdue:!!nextIso&&nextIso<todayLocal};
+            })
+            .sort((a:any,b:any)=>(a.lastIso||"").localeCompare(b.lastIso||""));
+          const lblS:React.CSSProperties={fontSize:8,fontWeight:700,color:"#999",letterSpacing:.5,marginBottom:2};
           return (
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <Pill c="#2FAA6B" t={`${sortedSuivis.length} suivi${sortedSuivis.length>1?"s":""}`}/>
+            <div className="ani" style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{display:"flex",gap:6}}>
+                {[{k:"urban",l:"Urban Neo",n:dUrban.length,c:"#3A9BD5"},{k:"green",l:"Green",n:dGreen.length,c:"#2FAA6B"}].map((t:any)=>(
+                  <button key={t.k} className="tb" onClick={()=>{setSuiviTab(t.k);setSuiviOpenIm(null);setSearch("");}} style={{padding:"6px 12px",borderRadius:6,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:suiviTab===t.k?"#fff":"transparent",color:suiviTab===t.k?"#1A1A1A":"#999",boxShadow:suiviTab===t.k?"0 1px 2px rgba(0,0,0,0.05)":"none"}}>
+                    {t.l} <span style={{padding:"1px 6px",borderRadius:6,fontSize:9,fontWeight:700,background:suiviTab===t.k?t.c:"#ddd",color:suiviTab===t.k?"#fff":"#999",marginLeft:3}}>{t.n}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher (chauffeur, immat)..." style={{...iS,width:240}}/>
                 <Pill c="#C0392B" t={`${nbImpactage} impactage${nbImpactage>1?"s":""}`}/>
                 <Pill c="#E8633A" t={`${totalImpactage.toFixed(2)} € total impactage`}/>
               </div>
-              <CrudP title="Historique des suivis" color="#2FAA6B" data={sortedSuivis} type="suivis" showAdd={showAdd} setShowAdd={setShowAdd}
-                fields={[["Immat *","im","XX-000-XX"],["Date *","date","JJ/MM ou JJ/MM/AAAA"],["Type","type",null,["SUIVI","IMPACTAGE"]],["Prix (€)","prix","0"],["Commentaire","co","..."]]}
-                form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
-                cols="90px 100px 95px 1fr 75px 1fr 130px" heads={["DATE","IMMAT","SOC","CHAUFFEUR","TYPE","COMMENTAIRE",""]}
-                rr={(s:any)=><><span style={{color:"#777",fontSize:11,fontFamily:"'IBM Plex Mono',monospace"}}>{s.date||"—"}</span><span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{s.im}</span><span><SocBadge s={s.soc}/></span><span style={{color:"#444"}}>{s.ch||"—"}</span><span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,background:s.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52",display:"inline-block",justifySelf:"start"}}>{s.type==="IMPACTAGE"?`IMPACTAGE · ${Number(s.prix||0).toFixed(2)}€`:"SUIVI"}</span><span style={{color:"#999",fontSize:11}}>{s.co||"—"}</span></>}
-              />
+              <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+                <div className="diff-head" style={{display:"grid",gridTemplateColumns:GRID,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
+                  <span>CHAUFFEUR</span><span>IMMAT</span><span>TÉL</span><span>KM</span><span>DERNIÈRE</span><span>PROCHAINE</span><span>DERNIER</span><span></span>
+                </div>
+                <div style={{maxHeight:520,overflowY:"auto"}}>
+                  {rows.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun vehicule</div>}
+                  {rows.map(({v,ch,last,lastIso,nextIso,overdue}:any)=>{
+                    const open=suiviOpenIm===v.im;
+                    return (
+                    <div key={v.im} style={{borderBottom:"1px solid #F5F5F3"}}>
+                      <div className="rw" onClick={()=>{setSuiviOpenIm(open?null:v.im);setChkForm({type:"SUIVI",date:todayLocal});setChkDel(null);}} style={{display:"grid",gridTemplateColumns:GRID,padding:"7px 12px",alignItems:"center",fontSize:12,cursor:"pointer"}}>
+                        <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"}</span>
+                        <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{v.im}</span>
+                        <span style={{color:"#666",fontSize:10,fontFamily:"'IBM Plex Mono',monospace"}}>{last?.tel||"—"}</span>
+                        <span style={{color:"#666",fontSize:10}}>{last?.km||"—"}</span>
+                        <span style={{color:"#777",fontSize:10}}>{lastIso?isoToFr(lastIso):"—"}</span>
+                        <span style={{fontSize:10,fontWeight:700,color:nextIso?(overdue?"#C0392B":"#1E8A52"):"#CCC"}}>{nextIso?isoToFr(nextIso):"—"}</span>
+                        <span>{last?<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:last.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:last.type==="IMPACTAGE"?"#C0392B":"#1E8A52"}}>{last.type==="IMPACTAGE"?`I ${Number(last.prix||0).toFixed(0)}€`:"S"}</span>:<span style={{fontSize:9,color:"#CCC"}}>—</span>}</span>
+                        <span style={{textAlign:"right",color:"#BBB",fontSize:11}}>{open?"▾":"▸"}</span>
+                      </div>
+                      {open&&(
+                        <div style={{padding:"10px 12px",background:"#FAFAF8",borderTop:"1px solid #EFEFED"}}>
+                          <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:10}}>
+                            {months.map((m:any)=>{
+                              const cks=ch.filter((s:any)=>monthKeyOf(s.date)===m.key);
+                              return (
+                                <div key={m.key} style={{border:`1px solid ${m.cur?"#E8633A":"#E5E5E3"}`,borderRadius:6,background:m.cur?"#FFF6F0":"#fff",minHeight:54,padding:"4px 6px"}}>
+                                  <div style={{fontSize:8,fontWeight:800,letterSpacing:.5,color:m.cur?"#E8633A":"#AAA"}}>{m.label} {m.yr}</div>
+                                  {cks.length===0?<div style={{fontSize:11,color:"#DDD",marginTop:6,textAlign:"center"}}>·</div>:cks.map((s:any)=>(
+                                    <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:3,marginTop:3}} title={s.co||""}>
+                                      <span style={{fontSize:9,fontWeight:700,color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52"}}>{s.type==="IMPACTAGE"?`I ${Number(s.prix||0).toFixed(0)}€`:"S"}</span>
+                                      {canEditChk&&(chkDel===s.id
+                                        ?<span style={{display:"inline-flex",gap:2}}><button onClick={(e)=>{e.stopPropagation();del("suivis",s.id);setChkDel(null);}} style={{padding:"0 4px",borderRadius:3,border:"none",background:"#C0392B",color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>oui</button><button onClick={(e)=>{e.stopPropagation();setChkDel(null);}} style={{padding:"0 4px",borderRadius:3,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>×</button></span>
+                                        :<button onClick={(e)=>{e.stopPropagation();setChkDel(s.id);}} style={{padding:"0 4px",borderRadius:3,border:"1px solid #E8E8E5",background:"#fff",color:"#CCC",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>×</button>)}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {canEditChk?(
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-end"}} onClick={(e)=>e.stopPropagation()}>
+                              <div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>DATE</span><input type="date" value={chkForm.date||""} onChange={e=>setChkForm({...chkForm,date:e.target.value})} style={{...iS,fontSize:10,padding:"4px 6px"}}/></div>
+                              <div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>TYPE</span><select value={chkForm.type||"SUIVI"} onChange={e=>setChkForm({...chkForm,type:e.target.value})} style={{...iS,fontSize:10,padding:"4px 6px"}}><option value="SUIVI">Suivi</option><option value="IMPACTAGE">Impactage</option></select></div>
+                              <div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>KM</span><input value={chkForm.km||""} onChange={e=>setChkForm({...chkForm,km:e.target.value})} placeholder="84000" style={{...iS,fontSize:10,padding:"4px 6px",width:80}}/></div>
+                              <div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>TÉL</span><input value={chkForm.tel||""} onChange={e=>setChkForm({...chkForm,tel:e.target.value})} placeholder="06..." style={{...iS,fontSize:10,padding:"4px 6px",width:100}}/></div>
+                              {chkForm.type==="IMPACTAGE"&&<div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>PRIX (€)</span><input type="number" min={0} value={chkForm.prix||""} onChange={e=>setChkForm({...chkForm,prix:e.target.value})} placeholder="0" style={{...iS,fontSize:10,padding:"4px 6px",width:80}}/></div>}
+                              <div style={{display:"flex",flexDirection:"column",flex:"1 1 120px"}}><span style={lblS}>COMMENTAIRE</span><input value={chkForm.co||""} onChange={e=>setChkForm({...chkForm,co:e.target.value})} placeholder="..." style={{...iS,fontSize:10,padding:"4px 6px",width:"100%"}}/></div>
+                              <button onClick={()=>{if(!chkForm.date){setToast({msg:"Date requise",type:"err"});return;}add("suivis",{im:v.im,date:chkForm.date,type:chkForm.type||"SUIVI",prix:chkForm.prix||0,co:chkForm.co||"",km:(chkForm.km||"").trim(),tel:(chkForm.tel||"").trim()});setChkForm({type:"SUIVI",date:todayLocal});}} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#1E8A52",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",height:30}}>+ Check</button>
+                            </div>
+                          ):<div style={{fontSize:10,color:"#BBB"}}>Lecture seule</div>}
+                        </div>
+                      )}
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           );
         })()}

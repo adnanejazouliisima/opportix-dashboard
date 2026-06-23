@@ -65,7 +65,7 @@ Frontend mirrors these as `useState` arrays/number with identical names (`urban`
 - **garage** — vehicles in workshop; exit-from-garage button puts the vehicle back in dispo.
 - **historique** — per-driver history aggregated from current + archived deps/rets (via `/api/history`).
 - **vacances** — driver vacations, sorted by closest end date. Adding one releases the driver's car (IMMO/VACANCES + dispo) — immediately if `deb` is today/past, otherwise deferred: `loadDataFromAPI` applies the transition once the start date arrives, using an `applied` flag on the entry so it never replays (dates are `DD/MM`, see `vacStarted()`).
-- **suivis** — follow-up log (date, type, prix, commentaire); drives the header bell.
+- **suivis** — vehicle check log, split Urban/Green (`suiviTab`) and shown one row per fleet vehicle (chauffeur, immat, tél, km, dernière/prochaine check). A row expands (`suiviOpenIm`) to a rolling 6-month grid (3 past + current + 2 ahead) and an inline add-check form (date, type SUIVI|IMPACTAGE, km, tél, prix, commentaire). Next check = last check + 1 month; overdue (past today) shown red. Still drives the header bell (>30 days since last suivi).
 - **utilisateurs** — visible only for `admin` / `editeur`; admin manages roles.
 
 ### API surface
@@ -96,7 +96,7 @@ Non-admin saves are rejected by "wipe protection" if any array shrinks by >50% �
 
 ### Suivis (follow-ups)
 
-Each `suivis` entry: `{id, im, soc, ch, mo, date, type:"SUIVI"|"IMPACTAGE", co, prix}`. The header bell shows vehicles whose most recent suivi is >30 days old (or absent). `lastSuiviDate(im, v.vs)` scans `suivis` for the highest date, falling back to legacy `v.vs` on the vehicle itself. Dates are normalized via `normalizeDate()` which accepts `YYYY-MM-DD`, `DD/MM/YYYY`, `DD/MM/YY`, `DD/MM` (current year). Anything that hits this code path must go through `normalizeDate` before being stored or compared.
+Each `suivis` entry: `{id, im, soc, ch, mo, date, type:"SUIVI"|"IMPACTAGE", co, prix, tel?, km?}` (`tel`/`km` are per-check, added in the reworked tab). The header bell shows vehicles whose most recent suivi is >30 days old (or absent). `lastSuiviDate(im, v.vs)` scans `suivis` for the highest date, falling back to legacy `v.vs` on the vehicle itself. Dates are normalized via `normalizeDate()` which accepts `YYYY-MM-DD`, `DD/MM/YYYY`, `DD/MM/YY`, `DD/MM` (current year). Anything that hits this code path must go through `normalizeDate` before being stored or compared.
 
 ### Adding a new "section"
 
