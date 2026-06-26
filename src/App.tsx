@@ -153,6 +153,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [chkDel,setChkDel]=useState<string|null>(null);
   const [chkEditCh,setChkEditCh]=useState<string|null>(null);
   const [chkChDraft,setChkChDraft]=useState("");
+  const [chkEditId,setChkEditId]=useState<string|null>(null);
+  const [chkEditF,setChkEditF]=useState<any>({});
   const [importing,setImporting]=useState(false);
   const [showAdd,setShowAdd]=useState<string|null>(null);
   const [form,setForm]=useState<any>({});
@@ -1275,28 +1277,53 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                               );
                             })}
                           </div>
-                          {/* Détail complet de chaque check (prix impactage, km, tél, commentaire...) */}
+                          {/* Détail complet et éditable de chaque check, tous mois confondus */}
+                          {(()=>{
+                          const DCOLS="78px 92px 60px 64px 90px 1fr 1.4fr 92px";
+                          return (
                           <div style={{marginBottom:10}} onClick={(e)=>e.stopPropagation()}>
                             <div style={{fontSize:9,fontWeight:700,color:"#999",letterSpacing:.5,marginBottom:4}}>DÉTAIL DES CHECKS ({ch.length})</div>
                             {ch.length===0?<div style={{fontSize:11,color:"#CCC",padding:"4px 0"}}>Aucun check enregistré pour ce véhicule.</div>:(
                               <div style={{border:"1px solid #EDEDEB",borderRadius:6,overflow:"hidden",background:"#fff"}}>
-                                <div className="hide-mobile" style={{display:"grid",gridTemplateColumns:"80px 80px 70px 80px 100px 1fr 1.6fr",padding:"5px 8px",background:"#F5F5F3",fontSize:8,fontWeight:700,color:"#AAA",letterSpacing:.5,textTransform:"uppercase"}}>
-                                  <span>DATE</span><span>TYPE</span><span>PRIX</span><span>KM</span><span>TÉL</span><span>CHAUFFEUR</span><span>COMMENTAIRE</span>
+                                <div className="hide-mobile" style={{display:"grid",gridTemplateColumns:DCOLS,padding:"5px 8px",background:"#F5F5F3",fontSize:8,fontWeight:700,color:"#AAA",letterSpacing:.5,textTransform:"uppercase"}}>
+                                  <span>DATE</span><span>TYPE</span><span>PRIX</span><span>KM</span><span>TÉL</span><span>CHAUFFEUR</span><span>COMMENTAIRE</span><span></span>
                                 </div>
                                 {ch.map((s:any)=>(
-                                  <div key={s.id} className="grid-mobile" style={{display:"grid",gridTemplateColumns:"80px 80px 70px 80px 100px 1fr 1.6fr",padding:"5px 8px",borderTop:"1px solid #F5F5F3",fontSize:10,alignItems:"center"}}>
+                                  chkEditId===s.id?(
+                                  <div key={s.id} className="grid-mobile" style={{display:"grid",gridTemplateColumns:DCOLS,gap:3,padding:"5px 8px",borderTop:"1px solid #F5F5F3",fontSize:10,alignItems:"center",background:"#FAFAF8"}}>
+                                    <input type="date" value={chkEditF.date||""} onChange={e=>setChkEditF({...chkEditF,date:e.target.value})} style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <select value={chkEditF.type||"SUIVI"} onChange={e=>setChkEditF({...chkEditF,type:e.target.value})} style={{...iS,fontSize:9,padding:"2px 3px"}}><option value="SUIVI">SUIVI</option><option value="IMPACTAGE">IMPACTAGE</option></select>
+                                    <input value={chkEditF.prix??""} onChange={e=>setChkEditF({...chkEditF,prix:e.target.value})} placeholder="0" disabled={chkEditF.type!=="IMPACTAGE"} style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <input value={chkEditF.km??""} onChange={e=>setChkEditF({...chkEditF,km:e.target.value})} placeholder="km" style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <input value={chkEditF.tel??""} onChange={e=>setChkEditF({...chkEditF,tel:e.target.value})} placeholder="tél" style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <input value={chkEditF.ch??""} onChange={e=>setChkEditF({...chkEditF,ch:e.target.value})} placeholder="chauffeur" style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <input value={chkEditF.co??""} onChange={e=>setChkEditF({...chkEditF,co:e.target.value})} placeholder="commentaire" style={{...iS,fontSize:9,padding:"2px 3px"}}/>
+                                    <span style={{display:"inline-flex",gap:3,justifyContent:"flex-end"}}>
+                                      <button onClick={()=>{edit("suivis",s.id,{date:chkEditF.date,type:chkEditF.type,prix:chkEditF.prix||0,km:(chkEditF.km||"").trim(),tel:(chkEditF.tel||"").trim(),ch:(chkEditF.ch||"").trim(),co:chkEditF.co||""});setChkEditId(null);}} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#1E8A52",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
+                                      <button onClick={()=>setChkEditId(null)} style={{padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+                                    </span>
+                                  </div>
+                                  ):(
+                                  <div key={s.id} className="grid-mobile" style={{display:"grid",gridTemplateColumns:DCOLS,padding:"5px 8px",borderTop:"1px solid #F5F5F3",fontSize:10,alignItems:"center"}}>
                                     <span style={{color:"#777",fontFamily:"'IBM Plex Mono',monospace",fontSize:10}}>{isoToFr(s._iso)}</span>
                                     <span><span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:s.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52"}}>{s.type==="IMPACTAGE"?"IMPACTAGE":"SUIVI"}</span></span>
                                     <span style={{color:s.type==="IMPACTAGE"?"#C0392B":"#BBB",fontWeight:s.type==="IMPACTAGE"?700:400}}>{s.type==="IMPACTAGE"?`${Number(s.prix||0).toFixed(2)}€`:"—"}</span>
                                     <span style={{color:"#666"}}>{s.km||"—"}</span>
                                     <span style={{color:"#666",fontFamily:"'IBM Plex Mono',monospace",fontSize:9}}>{s.tel||"—"}</span>
                                     <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.ch||"—"}</span>
-                                    <span style={{color:"#888",fontSize:10}}>{s.co||"—"}</span>
+                                    <span style={{color:"#888",fontSize:10,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={s.co||""}>{s.co||"—"}</span>
+                                    <span style={{display:"inline-flex",gap:3,justifyContent:"flex-end"}}>
+                                      {canEditChk&&(chkDel===s.id
+                                        ?<><button onClick={()=>{del("suivis",s.id);setChkDel(null);}} style={{padding:"2px 6px",borderRadius:4,border:"none",background:"#C0392B",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button><button onClick={()=>setChkDel(null)} style={{padding:"2px 6px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>×</button></>
+                                        :<><button title="Éditer ce check" onClick={()=>{setChkEditId(s.id);setChkEditF({date:s._iso,type:s.type||"SUIVI",prix:s.prix||"",km:s.km||"",tel:s.tel||"",ch:s.ch||"",co:s.co||""});setChkDel(null);}} style={{padding:"2px 6px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#3A9BD5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>Éditer</button><button title="Supprimer" onClick={()=>{setChkDel(s.id);setChkEditId(null);}} style={{padding:"2px 6px",borderRadius:4,border:"1px solid #E8E8E5",background:"#fff",color:"#BBB",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>×</button></>)}
+                                    </span>
                                   </div>
+                                  )
                                 ))}
                               </div>
                             )}
                           </div>
+                          );})()}
                           {canEditChk?(
                             <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-end"}} onClick={(e)=>e.stopPropagation()}>
                               <div style={{display:"flex",flexDirection:"column"}}><span style={lblS}>DATE</span><input type="date" value={chkForm.date||""} onChange={e=>setChkForm({...chkForm,date:e.target.value})} style={{...iS,fontSize:10,padding:"4px 6px"}}/></div>
