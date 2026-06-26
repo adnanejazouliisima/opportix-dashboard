@@ -1202,7 +1202,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           const totalImpactage=checksAll.filter((s:any)=>s.type==="IMPACTAGE").reduce((a:number,s:any)=>a+(Number(s.prix)||0),0);
           const nbImpactage=checksAll.filter((s:any)=>s.type==="IMPACTAGE").length;
           const canEditChk=!isHistorical&&displayUser.role!=='lecteur';
-          const GRID="1fr 95px 105px 70px 90px 90px 90px 34px";
+          const GRID="95px 110px 1fr 105px 70px 90px 90px 90px 34px";
           const rows=fleet
             .filter((v:any)=>!q||(v.im||"").toLowerCase().includes(q)||(v.ch||"").toLowerCase().includes(q))
             .map((v:any)=>{
@@ -1231,7 +1231,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               </div>
               <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
                 <div className="diff-head" style={{display:"grid",gridTemplateColumns:GRID,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
-                  <span>CHAUFFEUR</span><span>IMMAT</span><span>TÉL</span><span>KM</span><span>DERNIÈRE</span><span>PROCHAINE</span><span>DERNIER</span><span></span>
+                  <span>IMMAT</span><span>MODÈLE</span><span>CHAUFFEUR</span><span>TÉL</span><span>KM</span><span>DERNIÈRE</span><span>PROCHAINE</span><span>DERNIER</span><span></span>
                 </div>
                 <div style={{maxHeight:520,overflowY:"auto"}}>
                   {rows.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun vehicule</div>}
@@ -1240,8 +1240,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                     return (
                     <div key={v.im} style={{borderBottom:"1px solid #F5F5F3"}}>
                       <div className="rw" onClick={()=>{const o=suiviOpenIm===v.im;setSuiviOpenIm(o?null:v.im);setChkForm({type:"SUIVI",date:todayLocal,ch:v.ch||""});setChkDel(null);setChkEditCh(null);}} style={{display:"grid",gridTemplateColumns:GRID,padding:"7px 12px",alignItems:"center",fontSize:12,cursor:"pointer"}}>
-                        <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"}</span>
                         <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,fontWeight:600}}>{v.im}</span>
+                        <span style={{color:"#666",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{[v.mq,v.mo].filter(Boolean).join(" ")||"—"}</span>
+                        <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch||"—"}</span>
                         <span style={{color:"#666",fontSize:10,fontFamily:"'IBM Plex Mono',monospace"}}>{last?.tel||"—"}</span>
                         <span style={{color:"#666",fontSize:10}}>{last?.km||"—"}</span>
                         <span style={{color:"#777",fontSize:10}}>{lastIso?isoToFr(lastIso):"—"}</span>
@@ -1273,6 +1274,28 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                                 </div>
                               );
                             })}
+                          </div>
+                          {/* Détail complet de chaque check (prix impactage, km, tél, commentaire...) */}
+                          <div style={{marginBottom:10}} onClick={(e)=>e.stopPropagation()}>
+                            <div style={{fontSize:9,fontWeight:700,color:"#999",letterSpacing:.5,marginBottom:4}}>DÉTAIL DES CHECKS ({ch.length})</div>
+                            {ch.length===0?<div style={{fontSize:11,color:"#CCC",padding:"4px 0"}}>Aucun check enregistré pour ce véhicule.</div>:(
+                              <div style={{border:"1px solid #EDEDEB",borderRadius:6,overflow:"hidden",background:"#fff"}}>
+                                <div className="hide-mobile" style={{display:"grid",gridTemplateColumns:"80px 80px 70px 80px 100px 1fr 1.6fr",padding:"5px 8px",background:"#F5F5F3",fontSize:8,fontWeight:700,color:"#AAA",letterSpacing:.5,textTransform:"uppercase"}}>
+                                  <span>DATE</span><span>TYPE</span><span>PRIX</span><span>KM</span><span>TÉL</span><span>CHAUFFEUR</span><span>COMMENTAIRE</span>
+                                </div>
+                                {ch.map((s:any)=>(
+                                  <div key={s.id} className="grid-mobile" style={{display:"grid",gridTemplateColumns:"80px 80px 70px 80px 100px 1fr 1.6fr",padding:"5px 8px",borderTop:"1px solid #F5F5F3",fontSize:10,alignItems:"center"}}>
+                                    <span style={{color:"#777",fontFamily:"'IBM Plex Mono',monospace",fontSize:10}}>{isoToFr(s._iso)}</span>
+                                    <span><span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:4,background:s.type==="IMPACTAGE"?"#FDECEC":"#E8F8F0",color:s.type==="IMPACTAGE"?"#C0392B":"#1E8A52"}}>{s.type==="IMPACTAGE"?"IMPACTAGE":"SUIVI"}</span></span>
+                                    <span style={{color:s.type==="IMPACTAGE"?"#C0392B":"#BBB",fontWeight:s.type==="IMPACTAGE"?700:400}}>{s.type==="IMPACTAGE"?`${Number(s.prix||0).toFixed(2)}€`:"—"}</span>
+                                    <span style={{color:"#666"}}>{s.km||"—"}</span>
+                                    <span style={{color:"#666",fontFamily:"'IBM Plex Mono',monospace",fontSize:9}}>{s.tel||"—"}</span>
+                                    <span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.ch||"—"}</span>
+                                    <span style={{color:"#888",fontSize:10}}>{s.co||"—"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           {canEditChk?(
                             <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-end"}} onClick={(e)=>e.stopPropagation()}>
