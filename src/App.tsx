@@ -1227,8 +1227,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher (chauffeur, immat)..." style={{...iS,width:240}}/>
-                <Pill c="#C0392B" t={`${nbImpactage} impactage${nbImpactage>1?"s":""}`}/>
-                <Pill c="#E8633A" t={`${totalImpactage.toFixed(2)} € total impactage`}/>
+                <Pill c="#C0392B" t={`${nbImpactage} impacté${nbImpactage>1?"s":""}`}/>
+                <Pill c="#E8633A" t={`${totalImpactage.toFixed(2)} € total impacté`}/>
                 {!isHistorical&&displayUser.role==='admin'&&<label title="Importer les suivis depuis un fichier Excel (feuilles Suivi + Départ)" style={{marginLeft:"auto",padding:"6px 12px",borderRadius:6,border:"1px solid #3A9BD5",background:"#fff",color:"#3A9BD5",fontSize:11,fontWeight:600,cursor:importing?"default":"pointer",fontFamily:"inherit",opacity:importing?.6:1}}>{importing?"Import en cours…":"Importer Excel"}<input type="file" accept=".xlsx,.xls" disabled={importing} style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)importSuivisExcel(f);e.currentTarget.value="";}}/></label>}
               </div>
               <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
