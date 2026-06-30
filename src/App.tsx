@@ -458,8 +458,21 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       const vacItem=chDep?vacs.find((v:any)=>v.ch&&v.ch.toUpperCase().trim()===chDep):null;
       const nv=vacItem?vacs.filter((v:any)=>v!==vacItem):vacs;
       if(vacItem){if(vacItem)fetch('/api/archive',{method:'POST',headers,body:JSON.stringify({section:'vacs',item:vacItem})}).catch(()=>{});setVacs(nv);}
+      // Retour auto du chauffeur precedent : si la voiture etait deja chez un vrai chauffeur
+      // (different du nouveau), on cree un retour editable dans l'onglet Retours.
+      const prevCh=(exists?.ch||"").trim();
+      const newCh=(entry.ch||"").trim();
+      const realDriver=(c:string)=>{const u=c.toUpperCase();return !!c&&u!=="BUREAU"&&u!=="VACANCES"&&!u.startsWith("GARAGE");};
+      let nr=rets;
+      if(exists&&realDriver(prevCh)&&newCh&&prevCh.toUpperCase()!==newCh.toUpperCase()){
+        const tt=new Date();const todayDM=`${String(tt.getDate()).padStart(2,"0")}/${String(tt.getMonth()+1).padStart(2,"0")}`;
+        const rsoc=urban.find((v:any)=>v.im===im)?"URBAN NEO":green.find((v:any)=>v.im===im)?"GREEN":(entry.soc||"");
+        const retEntry={id:uid(),soc:rsoc,im,mo:entry.mo||exists.mo||"",ch:prevCh,dt:entry.dt||todayDM,no:`Retour auto (départ ${newCh})`};
+        nr=sortByDate([...rets,retEntry]);
+        setRets(nr);
+      }
       setUrban(nu);setGreen(ng);setDisp(nd);
-      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa,va:nv,...extra});
+      sv({u:nu,g:ng,dep:n,di:nd,ga:nGa,va:nv,...(nr!==rets?{ret:nr}:{}),...extra});
     }else if(type==="rets"&&entry.im){
       if(!disp.find((d:any)=>d.im===entry.im.toUpperCase().trim())){
         const im=entry.im.toUpperCase().trim();

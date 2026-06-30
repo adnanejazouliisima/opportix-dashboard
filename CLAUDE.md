@@ -60,7 +60,7 @@ Frontend mirrors these as `useState` arrays/number with identical names (`urban`
 - **diffusion** — landing page: KPI tiles (TOTAL, URBAN, GREEN, CHAUFFEURS ACTIFS, VP) + six DiffBlock mini-tables.
 - **vehicules** — overview of both fleets side-by-side (read-only).
 - **flotte** — single-fleet CRUD (Urban or Green sub-tab), with inline edit + Statut toggle ACTIF/IMMO.
-- **departs / retours** — CRUD of mission departures/returns. Adding a depart auto-creates the vehicle in fleet if missing, removes it from dispo/garage, and cancels the driver's vacation.
+- **departs / retours** — CRUD of mission departures/returns. Adding a depart auto-creates the vehicle in fleet if missing, removes it from dispo/garage, and cancels the driver's vacation. If the car was already assigned to a different real driver, it also auto-creates an editable retour for that previous driver (in `ret`, dated like the depart, note "Retour auto …").
 - **dispo** — vehicles available pool.
 - **garage** — vehicles in workshop; exit-from-garage button puts the vehicle back in dispo.
 - **historique** — per-driver history aggregated from current + archived deps/rets (via `/api/history`).
