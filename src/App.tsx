@@ -4,7 +4,40 @@ import { Bell } from "lucide-react";
 import { Toast, Pill, Sel, StBadge, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
 import logoUrl from "./assets/logo.jpeg";
 
-
+/* ═══ INVITE D'INSTALLATION PWA ═══ */
+function InstallPrompt(){
+  const [visible,setVisible]=useState(false);
+  const [deferred,setDeferred]=useState<any>(null);
+  const [ios,setIos]=useState(false);
+  useEffect(()=>{
+    const standalone=window.matchMedia?.("(display-mode: standalone)").matches||(navigator as any).standalone===true;
+    if(standalone||localStorage.getItem("opx-install-hide")) return;
+    if(/iphone|ipad|ipod/i.test(navigator.userAgent)){setIos(true);setVisible(true);return;}
+    const existing=(window as any).__deferredInstallPrompt;
+    if(existing){setDeferred(existing);setVisible(true);}
+    const onReady=()=>{setDeferred((window as any).__deferredInstallPrompt);setVisible(true);};
+    const onBip=(e:any)=>{e.preventDefault();setDeferred(e);setVisible(true);};
+    const onDone=()=>{setVisible(false);localStorage.setItem("opx-install-hide","1");};
+    window.addEventListener("pwa-installable",onReady);
+    window.addEventListener("beforeinstallprompt",onBip);
+    window.addEventListener("appinstalled",onDone);
+    return ()=>{window.removeEventListener("pwa-installable",onReady);window.removeEventListener("beforeinstallprompt",onBip);window.removeEventListener("appinstalled",onDone);};
+  },[]);
+  if(!visible) return null;
+  const hide=()=>{setVisible(false);localStorage.setItem("opx-install-hide","1");};
+  const doInstall=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice;}catch{}setDeferred(null);setVisible(false);};
+  return (
+    <div style={{position:"fixed",left:12,right:12,bottom:12,zIndex:9997,background:"#1A1A1A",color:"#fff",borderRadius:12,padding:"11px 13px",boxShadow:"0 6px 24px rgba(0,0,0,0.28)",display:"flex",alignItems:"center",gap:11,maxWidth:520,margin:"0 auto"}}>
+      <div style={{width:34,height:34,borderRadius:8,background:"#E8633A",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,fontFamily:"'IBM Plex Mono',monospace",flexShrink:0}}>O</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:12,fontWeight:700}}>Installer Opportix</div>
+        <div style={{fontSize:10,color:"#BBB",marginTop:2,lineHeight:1.3}}>{ios?"Touchez « Partager » puis « Sur l'écran d'accueil »":"Accès rapide en plein écran, comme une vraie appli."}</div>
+      </div>
+      {!ios&&<button onClick={doInstall} style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#E8633A",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Installer</button>}
+      <button onClick={hide} title="Masquer" style={{padding:"6px 9px",borderRadius:8,border:"1px solid #444",background:"transparent",color:"#BBB",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+    </div>
+  );
+}
 
 function LoginPage({onLogin}:any){
   const [login,setLogin]=useState("");
@@ -172,6 +205,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const saveGenRef=useRef(0);
   const [toast,setToast]=useState<{msg:string,type:"ok"|"err"}|null>(null);
   const [saving,setSaving]=useState(false);
+  const [online,setOnline]=useState<boolean>(typeof navigator!=='undefined'?navigator.onLine:true);
   const [snapshots,setSnapshots]=useState<{weekLabel:string,from:string,to:string,createdAt:string}[]>([]);
   const [viewWeek,setViewWeek]=useState<string|null>(null);
   const [snapshotData,setSnapshotData]=useState<any>(null);
@@ -297,6 +331,13 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     const interval=setInterval(loadDataFromAPI,15000);
     return ()=>{socket.off('data-changed',onChange);socket.disconnect();clearInterval(interval);};
   },[userToken]);
+
+  // Détection hors-ligne : bannière + rechargement des données au retour du réseau.
+  useEffect(()=>{
+    const on=()=>{setOnline(true);loadDataFromAPI();},off=()=>setOnline(false);
+    window.addEventListener('online',on);window.addEventListener('offline',off);
+    return ()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);};
+  },[]);
 
   // Load snapshot list
   useEffect(()=>{
@@ -782,6 +823,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     <div className="app-shell" style={{minHeight:"100vh",background:"#F3F3F1",color:"#333",fontFamily:"'Outfit',system-ui,sans-serif",fontSize:13}}>
       {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
       {saving&&<div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"#E8633A",zIndex:9998,animation:"fi .2s ease both"}}/>}
+      <InstallPrompt/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
@@ -791,8 +833,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .hide-mobile{display:none!important}
           .grid-mobile{grid-template-columns:1fr!important}
           .header-pills{display:none!important}
-          .nav-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
+          .nav-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;padding:6px 10px!important}
           .nav-scroll::-webkit-scrollbar{display:none}
+          .app-header{padding:8px 12px!important}
+          .app-main{padding:10px 10px!important}
+          /* Tables denses : défilement horizontal au lieu d'écraser les colonnes */
+          .diff-block{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+          .tb{padding:7px 12px!important}
+          .app-shell{padding-bottom:80px}
         }
         @media(min-width:1920px){
           body{zoom:1.25}
@@ -898,6 +946,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           </div>
         </div>
       </header>
+
+      {!online&&<div style={{padding:"6px 20px",background:"#FDECEC",borderBottom:"1px solid #F5C6C6",fontSize:11,fontWeight:600,color:"#C0392B",textAlign:"center"}}>Hors-ligne — affichage des dernières données en cache, modifications indisponibles jusqu'au retour du réseau</div>}
 
       <nav className="nav-scroll" style={{display:"flex",gap:2,padding:"6px 20px",background:"#F3F3F1",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",overflowX:"auto"}}>
         {TABS.map(t=><button key={t.k} className="tb" onClick={()=>go(t.k)} style={{padding:"6px 12px",borderRadius:6,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",background:tab===t.k?"#fff":"transparent",color:tab===t.k?"#1A1A1A":"#999",boxShadow:tab===t.k?"0 1px 2px rgba(0,0,0,0.05)":"none",transition:"all .15s"}}>{t.l}</button>)}

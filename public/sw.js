@@ -1,9 +1,9 @@
-/* Service worker Opportix — installabilité PWA + cache de la coque statique.
-   Conçu pour être SANS RISQUE sur les données : il ne touche jamais à /api,
-   ni au WebSocket (/socket.io), ni aux requêtes non-GET (sauvegardes). Stratégie
-   "réseau d'abord" pour le reste : on a toujours le code le plus récent en ligne,
-   et la coque sert seulement de repli hors-ligne. */
+/* Service worker Opportix — installabilité PWA + cache de la coque + lecture hors-ligne.
+   Stratégie "réseau d'abord" partout : en ligne on a toujours les données les plus récentes,
+   le cache ne sert que de repli hors-ligne. Les écritures (POST/PUT) et le WebSocket ne sont
+   jamais interceptés — aucune donnée live n'est servie périmée quand le réseau est présent. */
 const CACHE = 'opportix-shell-v1';
+const API_CACHE = 'opportix-api-v1';
 const SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {
@@ -13,20 +13,37 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
+    const keep = [CACHE, API_CACHE];
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => !keep.includes(k)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return; // jamais les sauvegardes (PUT/POST)
+  if (req.method !== 'GET') return;                    // jamais les écritures (PUT/POST)
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // tiers : laisser passer
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) return; // données live : jamais en cache
+  if (url.origin !== self.location.origin) return;     // tiers : laisser passer
+  if (url.pathname.startsWith('/socket.io')) return;   // WebSocket : jamais en cache
 
-  // Réseau d'abord ; en cas d'échec (hors-ligne), repli sur le cache puis la coque.
+  if (url.pathname.startsWith('/api')) {
+    // API en lecture (GET) : réseau d'abord, on garde une copie pour le hors-ligne.
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(API_CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req)) // hors-ligne : dernière réponse connue (ou undefined)
+    );
+    return;
+  }
+
+  // Coque statique : réseau d'abord, repli sur le cache puis index.html hors-ligne.
   e.respondWith(
     fetch(req)
       .then((res) => {

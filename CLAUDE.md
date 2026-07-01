@@ -114,3 +114,7 @@ The pattern for adding a collection-style tab:
 - `dist/` is the Vite build output; the server serves it statically in prod.
 - `patch_app.cjs`, `DOC_SITE.html` are old one-off artifacts; not part of the runtime.
 - `.claude/settings.local.json` is gitignored — local-only permission overrides.
+
+### PWA (installable app)
+
+The app is an installable PWA: [public/manifest.webmanifest](public/manifest.webmanifest), icons generated from the logo via `npm run icons` ([scripts/generate-icons.mjs](scripts/generate-icons.mjs), uses `sharp`, a devDependency), and a service worker [public/sw.js](public/sw.js) registered only in production from [src/main.tsx](src/main.tsx). The SW is **network-first everywhere** and never intercepts non-GET or `/socket.io`; GET `/api/*` responses are cached (`opportix-api-v1`) so the app is **read-only viewable offline** (last data), the static shell in `opportix-shell-v1`. `InstallPrompt` (top of [src/App.tsx](src/App.tsx)) shows a custom install banner (Android via `beforeinstallprompt` captured early in main.tsx; iOS shows Add-to-Home-Screen instructions), dismissal remembered in `localStorage` (`opx-install-hide`). An offline banner (driven by `online`/`navigator.onLine`) appears when the network drops; writes fail gracefully via `sv()`'s existing rollback.
