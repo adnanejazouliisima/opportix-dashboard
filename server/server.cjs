@@ -21,9 +21,9 @@ const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
 
 /* ═══ PUSH NOTIFICATIONS (Web Push / VAPID) ═══ */
-const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:urbanneoclient@gmail.com';
+const VAPID_PUBLIC = (process.env.VAPID_PUBLIC_KEY || '').trim();
+const VAPID_PRIVATE = (process.env.VAPID_PRIVATE_KEY || '').trim();
+const VAPID_SUBJECT = (process.env.VAPID_SUBJECT || 'mailto:urbanneoclient@gmail.com').trim();
 const pushEnabled = !!(VAPID_PUBLIC && VAPID_PRIVATE);
 if (pushEnabled) {
   try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE); }
@@ -690,7 +690,7 @@ async function startServer() {
           sendOverdueDigest().then(() => console.log('  🔔 Digest suivis envoyé')).catch(() => {});
         }, 24 * 60 * 60 * 1000);
       }, nextDigest - now);
-      console.log(`  🔔 Push actif — prochain digest suivis: ${nextDigest.toISOString()}`);
+      console.log(`  🔔 Push actif — clé publique: ${VAPID_PUBLIC.length} car. (attendu ~87), privée: ${VAPID_PRIVATE.length} car. (attendu ~43) — prochain digest: ${nextDigest.toISOString()}`);
     } else {
       console.log('  🔕 Push désactivé (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY manquants)');
     }

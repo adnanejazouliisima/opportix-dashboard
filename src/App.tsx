@@ -95,6 +95,7 @@ const API_URL = "";
 const uid=()=>crypto.randomUUID();
 // Convertit une clé VAPID base64url en Uint8Array pour pushManager.subscribe.
 function urlB64ToU8(base64String:string){
+  base64String=(base64String||"").trim().replace(/\s+/g,"");
   const padding="=".repeat((4-base64String.length%4)%4);
   const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
   const raw=atob(base64);const arr=new Uint8Array(raw.length);
