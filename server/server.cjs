@@ -8,6 +8,7 @@ const { MongoClient } = require('mongodb');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
+const webpush = require('web-push');
 
 const app = express();
 // Trust one proxy hop (Render/Heroku/etc.) so req.ip works and rate-limit keys on real client IP.
@@ -18,6 +19,16 @@ const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
   ? (() => { console.error('  ❌ JWT_SECRET env var requis en production'); process.exit(1); })()
   : 'network-dashboard-secret-key-2024');
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
+
+/* ═══ PUSH NOTIFICATIONS (Web Push / VAPID) ═══ */
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:urbanneoclient@gmail.com';
+const pushEnabled = !!(VAPID_PUBLIC && VAPID_PRIVATE);
+if (pushEnabled) {
+  try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE); }
+  catch (e) { console.error('  ⚠️ VAPID invalide:', e.message); }
+}
 
 /* ═══ CORS — only allow own origin in production ═══ */
 const ALLOWED_ORIGINS = [
@@ -88,6 +99,7 @@ async function connectDB() {
   await db.collection('audit').createIndex({ ts: -1 });
   await db.collection('archive').createIndex({ deletedAt: -1 });
   await db.collection('snapshots').createIndex({ weekLabel: 1 }, { unique: true });
+  await db.collection('push_subs').createIndex({ endpoint: 1 }, { unique: true });
 
   await seedIfEmpty();
   await runMigrations();
@@ -168,6 +180,63 @@ async function takeSnapshot(triggeredBy = 'auto') {
   await db.collection('snapshots').replaceOne({ weekLabel }, snapshot, { upsert: true });
   await audit({ username: triggeredBy }, 'snapshot_created', { weekLabel });
   return weekLabel;
+}
+
+/* ═══ SUIVI OVERDUE + PUSH ═══ */
+// Normalise une date (YYYY-MM-DD, DD/MM/YYYY, DD/MM/YY, DD/MM) en ISO — miroir du frontend.
+function normalizeDateSrv(s) {
+  if (!s) return '';
+  const t = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  let m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m) return `20${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  m = t.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m) return `${new Date().getFullYear()}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+// Véhicules dont le dernier suivi remonte à plus de 30 jours (ou jamais) — même logique que la cloche.
+function computeOverdue(doc) {
+  const lastByIm = {};
+  for (const s of (doc.suivis || [])) {
+    if (!s.im || !s.date) continue;
+    const iso = normalizeDateSrv(s.date);
+    if (iso && (!lastByIm[s.im] || iso > lastByIm[s.im])) lastByIm[s.im] = iso;
+  }
+  const now = new Date();
+  const todayMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const overdue = [];
+  for (const v of [...(doc.u || []), ...(doc.g || [])]) {
+    const iso = lastByIm[v.im] || normalizeDateSrv(v.vs);
+    let days = Infinity;
+    if (iso) { const d = new Date(iso); if (!isNaN(d.getTime())) days = Math.floor((todayMs - d.getTime()) / 86400000); }
+    if (days > 30) overdue.push({ im: v.im, ch: v.ch || '', days: days === Infinity ? null : days });
+  }
+  return overdue.sort((a, b) => (b.days || 9999) - (a.days || 9999));
+}
+async function sendPush(payload, filter = {}) {
+  if (!pushEnabled) return 0;
+  const subs = await db.collection('push_subs').find(filter).toArray();
+  let sent = 0;
+  await Promise.all(subs.map(async (s) => {
+    try { await webpush.sendNotification(s.subscription, JSON.stringify(payload)); sent++; }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await db.collection('push_subs').deleteOne({ _id: s._id }); }
+  }));
+  return sent;
+}
+async function sendOverdueDigest() {
+  if (!pushEnabled) return;
+  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  if (!doc) return;
+  const overdue = computeOverdue(doc);
+  if (!overdue.length) return;
+  const top = overdue.slice(0, 3).map((o) => o.im).join(', ');
+  await sendPush({
+    title: `${overdue.length} suivi${overdue.length > 1 ? 's' : ''} en retard`,
+    body: `Véhicules à contrôler : ${top}${overdue.length > 3 ? '…' : ''}`,
+    url: '/',
+  });
 }
 
 /* ═══ AUTH MIDDLEWARE ═══ */
@@ -382,6 +451,40 @@ app.get('/api/export/csv', auth, async (req, res) => {
   res.send('\uFEFF' + csv); // BOM for Excel compatibility
 });
 
+/* ═══ PUSH NOTIFICATION ROUTES ═══ */
+// Clé publique VAPID pour que le client puisse s'abonner (+ état d'activation).
+app.get('/api/push/vapid', auth, (req, res) => {
+  res.json({ publicKey: pushEnabled ? VAPID_PUBLIC : null, enabled: pushEnabled });
+});
+// Enregistre l'abonnement push du navigateur (upsert par endpoint).
+app.post('/api/push/subscribe', auth, async (req, res) => {
+  const sub = req.body && req.body.subscription;
+  if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Abonnement invalide' });
+  await db.collection('push_subs').updateOne(
+    { endpoint: sub.endpoint },
+    { $set: { endpoint: sub.endpoint, subscription: sub, user: req.user.username, updatedAt: new Date() } },
+    { upsert: true }
+  );
+  res.json({ ok: true });
+});
+// Désabonnement.
+app.post('/api/push/unsubscribe', auth, async (req, res) => {
+  const endpoint = req.body && req.body.endpoint;
+  if (endpoint) await db.collection('push_subs').deleteOne({ endpoint });
+  res.json({ ok: true });
+});
+// Envoi de test : pousse le vrai digest des suivis en retard (ou un message si aucun).
+app.post('/api/push/test', auth, async (req, res) => {
+  if (!pushEnabled) return res.status(400).json({ error: 'Push non configuré côté serveur' });
+  const doc = await db.collection('data').findOne({ _key: 'fleet' });
+  const overdue = doc ? computeOverdue(doc) : [];
+  const payload = overdue.length
+    ? { title: `${overdue.length} suivi${overdue.length > 1 ? 's' : ''} en retard`, body: `Véhicules à contrôler : ${overdue.slice(0, 3).map((o) => o.im).join(', ')}${overdue.length > 3 ? '…' : ''}`, url: '/' }
+    : { title: 'Opportix — test', body: 'Notifications activées ✓ (aucun suivi en retard)', url: '/' };
+  const sent = await sendPush(payload);
+  res.json({ ok: true, sent, overdue: overdue.length });
+});
+
 /* ═══ SNAPSHOT ROUTES ═══ */
 app.post('/api/snapshots', auth, canEdit, async (req, res) => {
   const weekLabel = await takeSnapshot(req.user.username);
@@ -574,6 +677,23 @@ async function startServer() {
       }, delay);
       console.log(`  ⏰ Prochain snapshot: ${next.toISOString()}`);
     })();
+
+    // Digest quotidien des suivis en retard (~08:00 Paris ≈ 06:00 UTC), si le push est configuré.
+    if (pushEnabled) {
+      const now = new Date();
+      const nextDigest = new Date(now);
+      nextDigest.setUTCHours(6, 0, 0, 0);
+      if (nextDigest <= now) nextDigest.setUTCDate(nextDigest.getUTCDate() + 1);
+      setTimeout(() => {
+        sendOverdueDigest().then((n) => console.log('  🔔 Digest suivis envoyé')).catch(() => {});
+        setInterval(() => {
+          sendOverdueDigest().then(() => console.log('  🔔 Digest suivis envoyé')).catch(() => {});
+        }, 24 * 60 * 60 * 1000);
+      }, nextDigest - now);
+      console.log(`  🔔 Push actif — prochain digest suivis: ${nextDigest.toISOString()}`);
+    } else {
+      console.log('  🔕 Push désactivé (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY manquants)');
+    }
   });
 
   server.on('error', (err) => {

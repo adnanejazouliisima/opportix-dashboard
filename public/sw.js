@@ -56,3 +56,27 @@ self.addEventListener('fetch', (e) => {
       .catch(() => caches.match(req).then((m) => m || caches.match('/index.html')))
   );
 });
+
+/* ═══ NOTIFICATIONS PUSH ═══ */
+self.addEventListener('push', (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; }
+  catch (_) { data = { title: 'Opportix', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(data.title || 'Opportix', {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'opportix-suivi',
+    data: { url: data.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of wins) { if ('focus' in c) { try { await c.navigate(url); } catch (_) {} return c.focus(); } }
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  })());
+});

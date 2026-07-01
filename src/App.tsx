@@ -91,6 +91,15 @@ function LoginPage({onLogin}:any){
 
 const API_URL = "";
 const uid=()=>crypto.randomUUID();
+// Convertit une clé VAPID base64url en Uint8Array pour pushManager.subscribe.
+function urlB64ToU8(base64String:string){
+  const padding="=".repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base64);const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+const pushSupported=typeof window!=='undefined'&&'Notification'in window&&'serviceWorker'in navigator&&'PushManager'in window;
 
 function getISOWeekLabel(date=new Date()){
   const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
@@ -206,6 +215,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   const [toast,setToast]=useState<{msg:string,type:"ok"|"err"}|null>(null);
   const [saving,setSaving]=useState(false);
   const [online,setOnline]=useState<boolean>(typeof navigator!=='undefined'?navigator.onLine:true);
+  const [pushOn,setPushOn]=useState(false);
+  const [pushBusy,setPushBusy]=useState(false);
   const [snapshots,setSnapshots]=useState<{weekLabel:string,from:string,to:string,createdAt:string}[]>([]);
   const [viewWeek,setViewWeek]=useState<string|null>(null);
   const [snapshotData,setSnapshotData]=useState<any>(null);
@@ -338,6 +349,33 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     window.addEventListener('online',on);window.addEventListener('offline',off);
     return ()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);};
   },[]);
+
+  // Notifications push : détecte un abonnement déjà actif.
+  useEffect(()=>{
+    if(!pushSupported) return;
+    navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription()).then(sub=>{if(sub&&Notification.permission==='granted')setPushOn(true);}).catch(()=>{});
+  },[]);
+  const enablePush=async()=>{
+    if(!pushSupported){setToast({msg:"Notifications non supportées sur cet appareil",type:"err"});return;}
+    setPushBusy(true);
+    try{
+      const r=await fetch('/api/push/vapid',{headers});const {publicKey,enabled}=await r.json();
+      if(!enabled||!publicKey){setToast({msg:"Notifications non configurées côté serveur",type:"err"});return;}
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted'){setToast({msg:"Autorisation des notifications refusée",type:"err"});return;}
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToU8(publicKey)});
+      const res=await fetch('/api/push/subscribe',{method:'POST',headers,body:JSON.stringify({subscription:sub})});
+      if(res.ok){setPushOn(true);setToast({msg:"Notifications de suivi activées ✓",type:"ok"});}
+      else setToast({msg:"Échec de l'abonnement",type:"err"});
+    }catch(e){setToast({msg:"Erreur lors de l'activation des notifications",type:"err"});console.error("Push error:",e);}
+    finally{setPushBusy(false);}
+  };
+  const testPush=async()=>{
+    try{const r=await fetch('/api/push/test',{method:'POST',headers});const d=await r.json().catch(()=>({}));
+      setToast({msg:r.ok?`Notification envoyée (${d.sent??0} appareil${(d.sent??0)>1?"s":""})`:(d.error||"Erreur d'envoi"),type:r.ok?"ok":"err"});
+    }catch{setToast({msg:"Erreur lors du test",type:"err"});}
+  };
 
   // Load snapshot list
   useEffect(()=>{
@@ -876,6 +914,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                   </div>
                   <button onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);setSuiviSearch("");}} style={{padding:"2px 7px",borderRadius:4,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>X</button>
                 </div>
+                {pushSupported&&<div style={{padding:"8px 14px",borderBottom:"1px solid #EDEDEB",background:"#fff",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  {pushOn
+                    ?<><span style={{fontSize:10,fontWeight:700,color:"#1E8A52"}}>🔔 Notifications activées</span><button onClick={testPush} style={{padding:"3px 10px",borderRadius:5,border:"1px solid #E0E0DE",background:"#fff",color:"#555",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Tester</button></>
+                    :<><span style={{fontSize:10,color:"#888",flex:1,minWidth:120}}>Être notifié des suivis en retard, même app fermée</span><button onClick={enablePush} disabled={pushBusy} style={{padding:"4px 12px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:10,fontWeight:700,cursor:pushBusy?"default":"pointer",fontFamily:"inherit",opacity:pushBusy?.6:1}}>{pushBusy?"…":"🔔 Activer"}</button></>}
+                </div>}
                 <div style={{padding:"8px 14px",borderBottom:"1px solid #EDEDEB",background:"#fff"}}>
                   <input value={suiviSearch} onChange={e=>setSuiviSearch(e.target.value)} placeholder="Rechercher (immat, chauffeur, modele...)" style={{...iS,width:"100%",fontSize:11,padding:"5px 8px"}}/>
                 </div>
