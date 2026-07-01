@@ -12,6 +12,8 @@ function InstallPrompt(){
   useEffect(()=>{
     const standalone=window.matchMedia?.("(display-mode: standalone)").matches||(navigator as any).standalone===true;
     if(standalone||localStorage.getItem("opx-install-hide")) return;
+    // N'afficher l'invite que sur téléphone/tablette, jamais sur le site en version ordinateur.
+    if(!/android|iphone|ipad|ipod|mobile|silk/i.test(navigator.userAgent)) return;
     if(/iphone|ipad|ipod/i.test(navigator.userAgent)){setIos(true);setVisible(true);return;}
     const existing=(window as any).__deferredInstallPrompt;
     if(existing){setDeferred(existing);setVisible(true);}
@@ -356,11 +358,14 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription()).then(sub=>{if(sub&&Notification.permission==='granted')setPushOn(true);}).catch(()=>{});
   },[]);
   const enablePush=async()=>{
+    const standalone=window.matchMedia?.("(display-mode: standalone)").matches||(navigator as any).standalone===true;
+    const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isIos&&!standalone){setToast({msg:"iPhone : installez d'abord l'app (Partager → Sur l'écran d'accueil), puis activez les notifications depuis l'app installée",type:"err"});return;}
     if(!pushSupported){setToast({msg:"Notifications non supportées sur cet appareil",type:"err"});return;}
     setPushBusy(true);
     try{
       const r=await fetch('/api/push/vapid',{headers});const {publicKey,enabled}=await r.json();
-      if(!enabled||!publicKey){setToast({msg:"Notifications non configurées côté serveur",type:"err"});return;}
+      if(!enabled||!publicKey){setToast({msg:"Notifications pas encore configurées sur le serveur (variables VAPID)",type:"err"});return;}
       const perm=await Notification.requestPermission();
       if(perm!=='granted'){setToast({msg:"Autorisation des notifications refusée",type:"err"});return;}
       const reg=await navigator.serviceWorker.ready;
@@ -881,6 +886,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           /* Tables denses : largeur lisible + défilement horizontal (en-tête et lignes alignés dans le même conteneur .tbli). */
           .tbli{min-width:600px}
           .diff-block .diff-head>span,.diff-block .diff-row>span,.diff-block .rw>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+          /* Menu de la cloche : pleine largeur sous l'en-tête au lieu de déborder hors de l'écran */
+          .bell-pop{position:fixed!important;left:8px!important;right:8px!important;top:calc(56px + env(safe-area-inset-top,0px))!important;width:auto!important;max-height:75vh!important}
           .tb{padding:7px 12px!important}
           .app-shell{padding-bottom:80px}
         }
@@ -906,7 +913,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </button>
             {suiviOpen&&(<>
               <div onClick={()=>{setSuiviOpen(false);setMarkingSuivi(null);}} style={{position:"fixed",inset:0,zIndex:9990}}/>
-              <div style={{position:"absolute",top:"calc(100% + 6px)",right:0,width:380,maxHeight:480,overflowY:"auto",background:"#fff",border:"1px solid #E5E5E3",borderRadius:8,boxShadow:"0 6px 24px rgba(0,0,0,0.12)",zIndex:9991}}>
+              <div className="bell-pop" style={{position:"absolute",top:"calc(100% + 6px)",right:0,width:380,maxHeight:480,overflowY:"auto",background:"#fff",border:"1px solid #E5E5E3",borderRadius:8,boxShadow:"0 6px 24px rgba(0,0,0,0.12)",zIndex:9991}}>
                 <div style={{padding:"10px 14px",borderBottom:"1px solid #EDEDEB",background:"#FAFAF8",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>Suivis en retard</div>

@@ -6,7 +6,7 @@ export const oBtn=(c:string,a:boolean):React.CSSProperties=>({padding:"6px 12px"
 /* ═══ TOAST ═══ */
 export function Toast({msg,type,onClose}:{msg:string,type:"ok"|"err",onClose:()=>void}){
   useEffect(()=>{const t=setTimeout(onClose,3500);return()=>clearTimeout(t);},[onClose]);
-  return <div style={{position:"fixed",top:16,right:16,zIndex:9999,padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:600,color:"#fff",background:type==="ok"?"#1E8A52":"#C0392B",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fi .2s ease both",cursor:"pointer"}} onClick={onClose}>{msg}</div>;
+  return <div style={{position:"fixed",top:"calc(16px + env(safe-area-inset-top, 0px))",right:"calc(16px + env(safe-area-inset-right, 0px))",left:"calc(16px + env(safe-area-inset-left, 0px))",zIndex:9999,padding:"10px 18px",borderRadius:8,fontSize:12,fontWeight:600,color:"#fff",background:type==="ok"?"#1E8A52":"#C0392B",boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fi .2s ease both",cursor:"pointer",maxWidth:420,marginLeft:"auto"}} onClick={onClose}>{msg}</div>;
 }
 
 /* ═══ SMALL COMPONENTS ═══ */
