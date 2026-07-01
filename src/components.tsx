@@ -52,10 +52,11 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
           </div>
         </div>
       )}
+      <div className="tblx"><div className="tbli">
       <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
         {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}<span></span>
       </div>
-      <div style={{maxHeight:maxH,overflowY:"auto"}}>
+      <div className="tblrows" style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
         data.map((d:any,i:number)=>(
           <div key={d.id??d.im??i} className="diff-row" style={editId===d.id?{padding:"8px 12px",borderBottom:"1px solid #F5F5F3",background:"#FAFAF8"}:{display:"grid",gridTemplateColumns:cols+" "+actCol,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>
@@ -78,6 +79,7 @@ export function DiffBlock({title,titleBg,color,count,heads,cols,data,maxH=160,re
           </div>
         ))}
       </div>
+      </div></div>
     </div>
   );
 }
@@ -120,8 +122,9 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
       <button onClick={doAdd} style={{marginTop:10,padding:"7px 18px",borderRadius:6,border:"none",background:"#1A1A1A",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
     </div>}
     <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
+      <div className="tblx"><div className="tbli">
       <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>{heads.map((h:string,i:number)=><span key={i}>{h}</span>)}</div>
-      <div style={{maxHeight:420,overflowY:"auto"}}>
+      <div className="tblrows" style={{maxHeight:420,overflowY:"auto"}}>
         {data.map((d:any,i:number)=><div key={useIdx?i:d.id} className="rw" style={{display:"grid",gridTemplateColumns:cols,padding:"7px 12px",borderBottom:"1px solid #F5F5F3",alignItems:"center",fontSize:12}}>
           {editId===d.id?<>{fields.map(([l,k,p,opts]:any)=><span key={k}>{opts
             ?<select value={editF[k]||opts[0]} onChange={e=>setEditF({...editF,[k]:e.target.value})} onKeyDown={e=>e.key==="Enter"&&saveEdit()} style={{...iS,width:"100%",fontSize:10,padding:"3px 5px"}}>{opts.map((o:string)=><option key={o} value={o}>{o}</option>)}</select>
@@ -132,6 +135,7 @@ export function CrudP({title,color,data,type,showAdd,setShowAdd,fields,form,setF
         </div>)}
         {data.length===0&&<div style={{padding:24,textAlign:"center",color:"#CCC",fontSize:11}}>Aucun element</div>}
       </div>
+      </div></div>
     </div>
   </div>;
 }

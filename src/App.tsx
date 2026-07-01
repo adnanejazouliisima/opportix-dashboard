@@ -809,13 +809,15 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           {countBad&&<span style={{fontSize:10,fontWeight:700,color:"#C0392B",background:"#FDECEC",padding:"1px 6px",borderRadius:4}}>{countBad}</span>}
         </div>
       </div>
+      <div className="tblx"><div className="tbli">
       <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
         {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}
       </div>
-      <div style={{maxHeight:maxH,overflowY:"auto"}}>
+      <div className="tblrows" style={{maxHeight:maxH,overflowY:"auto"}}>
         {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
         data.map((d:any,i:number)=><div key={d.id??d.im??i} className="diff-row" style={{display:"grid",gridTemplateColumns:cols,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>{renderRow(d,i)}</div>)}
       </div>
+      </div></div>
     </div>
   );
 
@@ -827,6 +829,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+        .tblx{overflow-x:auto;-webkit-overflow-scrolling:touch}
         @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}.ani{animation:fi .2s ease both}
         .rw:hover{background:#F7F7F5!important}.tb:hover{background:#EAEAE8!important}input:focus,select:focus{outline:none;border-color:#E8633A!important}.dl:hover{background:#FEE!important;color:#C0392B!important}
         @media(max-width:768px){
@@ -837,7 +840,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .nav-scroll::-webkit-scrollbar{display:none}
           .app-header{padding:calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 12px!important}
           .app-main{padding:10px 10px!important}
-          /* Tables denses : autoriser les cellules à rétrécir pour que l'en-tête et les valeurs restent alignés (sinon débordement + décalage) */
+          /* Tables denses : largeur lisible + défilement horizontal (en-tête et lignes alignés dans le même conteneur .tbli). */
+          .tbli{min-width:600px}
           .diff-block .diff-head>span,.diff-block .diff-row>span,.diff-block .rw>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
           .tb{padding:7px 12px!important}
           .app-shell{padding-bottom:80px}
