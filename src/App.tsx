@@ -835,7 +835,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .header-pills{display:none!important}
           .nav-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;padding:6px 10px!important}
           .nav-scroll::-webkit-scrollbar{display:none}
-          .app-header{padding:8px 12px!important}
+          .app-header{padding:calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 12px!important}
           .app-main{padding:10px 10px!important}
           /* Tables denses : défilement horizontal au lieu d'écraser les colonnes */
           .diff-block{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
@@ -850,7 +850,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
         }
       `}</style>
 
-      <header className="app-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
+      <header className="app-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",paddingTop:"calc(10px + env(safe-area-inset-top, 0px))",background:"#fff",borderBottom:"1px solid #E5E5E3",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <img className="logo-icon" src={logoUrl} alt="Opportix" style={{width:30,height:30,borderRadius:7,objectFit:"cover",display:"block"}}/>
           <div><div className="logo-text" style={{fontSize:13,fontWeight:800,letterSpacing:2,color:"#1A1A1A"}}>OPPORTIX</div></div>
