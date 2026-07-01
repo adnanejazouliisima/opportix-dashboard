@@ -364,16 +364,18 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     if(!pushSupported){setToast({msg:"Notifications non supportées sur cet appareil",type:"err"});return;}
     setPushBusy(true);
     try{
+      // iOS: requestPermission DOIT être appelé dans le geste utilisateur, avant tout await.
+      let perm=Notification.permission;
+      if(perm!=='granted') perm=await Notification.requestPermission();
+      if(perm!=='granted'){setToast({msg:perm==='denied'?"Notifications bloquées — autorisez-les dans Réglages > l'app":"Autorisation des notifications refusée",type:"err"});return;}
       const r=await fetch('/api/push/vapid',{headers});const {publicKey,enabled}=await r.json();
       if(!enabled||!publicKey){setToast({msg:"Notifications pas encore configurées sur le serveur (variables VAPID)",type:"err"});return;}
-      const perm=await Notification.requestPermission();
-      if(perm!=='granted'){setToast({msg:"Autorisation des notifications refusée",type:"err"});return;}
       const reg=await navigator.serviceWorker.ready;
       const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToU8(publicKey)});
       const res=await fetch('/api/push/subscribe',{method:'POST',headers,body:JSON.stringify({subscription:sub})});
       if(res.ok){setPushOn(true);setToast({msg:"Notifications de suivi activées ✓",type:"ok"});}
-      else setToast({msg:"Échec de l'abonnement",type:"err"});
-    }catch(e){setToast({msg:"Erreur lors de l'activation des notifications",type:"err"});console.error("Push error:",e);}
+      else{const e=await res.json().catch(()=>({}));setToast({msg:"Échec de l'abonnement: "+(e.error||res.status),type:"err"});}
+    }catch(e:any){setToast({msg:"Erreur activation : "+(e?.name||"")+" "+(e?.message||e),type:"err"});console.error("Push error:",e);}
     finally{setPushBusy(false);}
   };
   const testPush=async()=>{
