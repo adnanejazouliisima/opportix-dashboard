@@ -837,8 +837,8 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           .nav-scroll::-webkit-scrollbar{display:none}
           .app-header{padding:calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 12px!important}
           .app-main{padding:10px 10px!important}
-          /* Tables denses : défilement horizontal au lieu d'écraser les colonnes */
-          .diff-block{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+          /* Tables denses : autoriser les cellules à rétrécir pour que l'en-tête et les valeurs restent alignés (sinon débordement + décalage) */
+          .diff-block .diff-head>span,.diff-block .diff-row>span,.diff-block .rw>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
           .tb{padding:7px 12px!important}
           .app-shell{padding-bottom:80px}
         }
