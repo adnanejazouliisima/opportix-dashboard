@@ -1152,9 +1152,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                 user={displayUser}
               />
               <DiffBlock title="VACANCES CHAUFFEURS" titleBg="#EDE8FA" color="#7B61FF" count={dVacs.length}
-                heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN"]} cols="1fr 65px 75px 60px 60px" data={dVacs} maxH={160}
-                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#666",fontSize:10}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span></>}
-                formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["mo","Modele","KONA..."],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"]]}
+                heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","COMMENTAIRE"]} cols="1fr 65px 75px 60px 60px 1fr" data={dVacs} maxH={160}
+                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#666",fontSize:10}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:10}}>{v.co||v.no||"—"}</span></>}
+                formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["mo","Modele","KONA..."],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"],["co","Commentaire","..."]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
                 onEdit={(id:any,updated:any)=>edit("vacs",id,updated)}
