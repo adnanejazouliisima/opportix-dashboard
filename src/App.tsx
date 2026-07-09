@@ -1379,7 +1379,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
                               const cks=ch.filter((s:any)=>monthKeyOf(s.date)===m.key);
                               return (
                                 <div key={m.key} style={{border:`1px solid ${m.cur?"#E8633A":"#E5E5E3"}`,borderRadius:6,background:m.cur?"#FFF6F0":"#fff",minHeight:62,padding:"4px 6px"}}>
-                                  <div style={{fontSize:8,fontWeight:800,letterSpacing:.5,color:m.cur?"#E8633A":"#AAA"}}>{m.label} {m.yr}</div>
+                                  <div style={{fontSize:8,fontWeight:800,letterSpacing:.5,color:m.cur?"#E8633A":"#AAA"}}>{m.label}</div>
                                   {cks.length===0?<div style={{fontSize:11,color:"#DDD",marginTop:6,textAlign:"center"}}>·</div>:cks.map((s:any)=>(
                                     <div key={s.id} style={{marginTop:4,paddingTop:3,borderTop:"1px dashed #EEE"}} title={s.co||""}>
                                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:3}}>
