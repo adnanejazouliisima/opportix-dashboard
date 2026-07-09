@@ -1303,10 +1303,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           </div>
         )}
         {tab==="vacances"&&<CrudP title="Vacances chauffeurs" color="#7B61FF" data={dVacs} type="vacs" showAdd={showAdd} setShowAdd={setShowAdd}
-          fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Modele","mo","KONA..."],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."]]}
+          fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Modele","mo","KONA..."],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."],["Commentaire","co","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
-          cols="1fr 80px 90px 80px 80px 1fr 60px" heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","NOTE",""]}
-          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span></>}
+          cols="1fr 80px 90px 80px 80px 1fr 1fr 60px" heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","NOTE","COMMENTAIRE",""]}
+          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.co||"—"}</span></>}
         />}
         {tab==="suivis"&&(()=>{
           const FR_MONTHS=["JAN","FÉV","MAR","AVR","MAI","JUN","JUL","AOÛ","SEP","OCT","NOV","DÉC"];
