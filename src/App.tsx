@@ -1153,7 +1153,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               />
               <DiffBlock title="VACANCES CHAUFFEURS" titleBg="#EDE8FA" color="#7B61FF" count={dVacs.length}
                 heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","COMMENTAIRE"]} cols="1fr 65px 75px 60px 60px 1fr" data={dVacs} maxH={160}
-                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#666",fontSize:10}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:10}}>{v.co||v.no||"—"}</span></>}
+                renderRow={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><SocBadge s={v.soc}/><span style={{color:"#666",fontSize:10}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:10}}>{v.fin||"—"}</span><span style={{color:v.co?"#C0392B":"#999",fontSize:10,fontWeight:v.co?600:400}}>{v.co||v.no||"—"}</span></>}
                 formFields={[["ch","Chauffeur *","Nom"],["soc","Societe",null,["URBAN NEO","GREEN"]],["mo","Modele","KONA..."],["deb","Debut","JJ/MM"],["fin","Fin","JJ/MM"],["co","Commentaire","..."]]}
                 onAdd={(f:any)=>{if(!f.ch?.trim())return;add("vacs",f);}}
                 onDel={(id:any)=>del("vacs",id)}
@@ -1306,7 +1306,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           fields={[["Chauffeur *","ch","Nom"],["Societe","soc",null,["URBAN NEO","GREEN"]],["Modele","mo","KONA..."],["Debut","deb","JJ/MM"],["Fin","fin","JJ/MM"],["Note","no","..."],["Commentaire","co","..."]]}
           form={form} setForm={setForm} addItem={add} delItem={del} editItem={edit} user={displayUser}
           cols="1fr 80px 90px 80px 80px 1fr 1fr 60px" heads={["CHAUFFEUR","SOCIETE","MODELE","DEBUT","FIN","NOTE","COMMENTAIRE",""]}
-          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.co||"—"}</span></>}
+          rr={(v:any)=><><span style={{fontWeight:600,color:"#333"}}>{v.ch}</span><span><SocBadge s={v.soc}/></span><span style={{color:"#666",fontSize:11}}>{v.mo||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.deb||"—"}</span><span style={{color:"#777",fontSize:11}}>{v.fin||"—"}</span><span style={{color:"#999",fontSize:11}}>{v.no||"—"}</span><span style={{color:v.co?"#C0392B":"#999",fontSize:11,fontWeight:v.co?600:400}}>{v.co||"—"}</span></>}
         />}
         {tab==="suivis"&&(()=>{
           const FR_MONTHS=["JAN","FÉV","MAR","AVR","MAI","JUN","JUL","AOÛ","SEP","OCT","NOV","DÉC"];
