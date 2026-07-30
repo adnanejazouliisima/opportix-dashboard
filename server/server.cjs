@@ -100,7 +100,6 @@ async function connectDB() {
   await db.collection('archive').createIndex({ deletedAt: -1 });
   await db.collection('snapshots').createIndex({ weekLabel: 1 }, { unique: true });
   await db.collection('push_subs').createIndex({ endpoint: 1 }, { unique: true });
-
   await seedIfEmpty();
   await runMigrations();
 }

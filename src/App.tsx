@@ -66,7 +66,7 @@ function LoginPage({onLogin}:any){
           <div style={{fontSize:20,fontWeight:800,letterSpacing:3,color:"#1A1A1A"}}>OPPORTIX</div>
           <div style={{fontSize:12,color:"#999",marginTop:4}}>Plateforme de gestion de flotte</div>
         </div>
-        <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E5E3",padding:28,boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E5E3",padding:28,boxShadow:"0 2px 8px rgba(0, 0, 0, 0.05)"}}>
           <div style={{fontSize:14,fontWeight:700,color:"#1A1A1A",marginBottom:20}}>Connexion</div>
           <form onSubmit={submit} style={{display:"flex",flexDirection:"column",gap:14}}>
             <div>
@@ -539,6 +539,11 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
       if(!exists){
         const newVeh={im,mq:pm.mq,mo:pm.mo,le,st:"ACTIF",ch:entry.ch||""};
         if(entry.soc==="GREEN"){ng=[...ng,newVeh];}else{nu=[...nu,newVeh];}
+      }else{
+        // Transfert de flotte si la societe du depart differe (meme logique que le garage)
+        const inU=urban.find((v:any)=>v.im===im);
+        if(inU&&entry.soc==="GREEN"){const mv=nu.find((v:any)=>v.im===im);nu=nu.filter((v:any)=>v.im!==im);ng=[...ng,mv];setToast({msg:`${im} transféré URBAN NEO → GREEN`,type:"ok"});}
+        else if(!inU&&entry.soc==="URBAN NEO"){const mv=ng.find((v:any)=>v.im===im);ng=ng.filter((v:any)=>v.im!==im);nu=[...nu,mv];setToast({msg:`${im} transféré GREEN → URBAN NEO`,type:"ok"});}
       }
       // Auto-supprimer la vacation du chauffeur s'il en a une
       const chDep=(entry.ch||"").toUpperCase().trim();
