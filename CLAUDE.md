@@ -58,8 +58,7 @@ Frontend mirrors these as `useState` arrays/number with identical names (`urban`
 `TABS` array in [App.tsx](src/App.tsx) drives the nav:
 
 - **diffusion** — landing page: KPI tiles (TOTAL, URBAN, GREEN, CHAUFFEURS ACTIFS, VP) + six DiffBlock mini-tables.
-- **vehicules** — overview of both fleets side-by-side (read-only).
-- **flotte** — single-fleet CRUD (Urban or Green sub-tab), with inline edit + Statut toggle ACTIF/IMMO.
+- **flotte** — single-fleet CRUD (Urban or Green sub-tab), with inline edit + Statut toggle ACTIF/IMMO. Sorted IMMO-first then grouped by model (`sortVeh`), red "à l'arrêt" counter in the header. (The old read-only **vehicules** tab was merged into it in August.)
 - **departs / retours** — CRUD of mission departures/returns. Adding a depart auto-creates the vehicle in fleet if missing, removes it from dispo/garage, and cancels the driver's vacation. If the depart's société differs from the fleet the car currently sits in, the vehicle is moved to that fleet (same pattern as garage; toast confirms the transfer). If the car was already assigned to a different real driver, it also auto-creates an editable retour for that previous driver (in `ret`, dated like the depart, note "Retour auto …", labeled with the car's previous société).
 - **dispo** — vehicles available pool.
 - **garage** — vehicles in workshop; exit-from-garage button puts the vehicle back in dispo.

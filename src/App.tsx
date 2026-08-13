@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
 import { Bell } from "lucide-react";
-import { Toast, Pill, Sel, StBadge, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
+import { Toast, Pill, Sel, SocBadge, DiffBlock, AddBox, CrudP, iS, oBtn } from "./components";
 import logoUrl from "./assets/logo.jpeg";
 
 /* ═══ INVITE D'INSTALLATION PWA ═══ */
@@ -506,10 +506,10 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
   };
 
   const cur=fTab==="urban"?dUrban:dGreen;
-  const filt=useMemo(()=>cur.filter(v=>{
+  const filt=useMemo(()=>sortVeh(cur.filter(v=>{
     if(search){const s=search.toLowerCase();return (v.im||"").toLowerCase().includes(s)||(v.ch||"").toLowerCase().includes(s)||(v.mq||"").toLowerCase().includes(s)||(v.mo||"").toLowerCase().includes(s)||(v.le||"").toLowerCase().includes(s);}
     return true;
-  }),[cur,search,fTab]);
+  })),[cur,search,fTab]);
 
   const add=(type:string,entry:any,extra:any={})=>{
     if(isHistorical) return;
@@ -847,30 +847,9 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
     finally{setImporting(false);}
   };
 
-  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"vehicules",l:"Vehicules"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"}];
+  const TABS=[{k:"diffusion",l:"Diffusion"},{k:"flotte",l:"Flotte"},{k:"departs",l:"Departs"},{k:"retours",l:"Retours"},{k:"dispo",l:"VH Dispo"},{k:"garage",l:"Garage"},{k:"historique",l:"Historique"},{k:"vacances",l:"Vacances"},{k:"suivis",l:"Suivis"}];
   if(user.role !== 'lecteur') TABS.push({k:"utilisateurs",l:"Comptes"});
   const go=async(t:string)=>{setTab(t);setShowAdd(null);setDelC(null);setSearch("");if(t==="historique"){try{const r=await fetch('/api/history',{headers});if(r.ok)setHistory(await r.json());}catch{}};};
-
-  const MiniTbl=({title,titleBg,count,countBad,heads,cols,data,renderRow,maxH=200}:any)=>(
-    <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
-      <div className="diff-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:titleBg||"#F5F5F3",borderBottom:"1px solid #E5E5E3"}}>
-        <span style={{fontSize:12,fontWeight:700,color:"#1A1A1A"}}>{title}</span>
-        <div style={{display:"flex",gap:6}}>
-          <span style={{fontSize:11,fontWeight:600,color:"#666"}}>{count}</span>
-          {countBad&&<span style={{fontSize:10,fontWeight:700,color:"#C0392B",background:"#FDECEC",padding:"1px 6px",borderRadius:4}}>{countBad}</span>}
-        </div>
-      </div>
-      <div className="tblx"><div className="tbli">
-      <div className="diff-head" style={{display:"grid",gridTemplateColumns:cols,padding:"6px 12px",background:"#FAFAF8",borderBottom:"1px solid #EDEDEB",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
-        {heads.map((h:string,i:number)=><span key={i}>{h}</span>)}
-      </div>
-      <div className="tblrows" style={{maxHeight:maxH,overflowY:"auto"}}>
-        {data.length===0?<div style={{padding:14,textAlign:"center",color:"#DDD",fontSize:11}}>Aucun element</div>:
-        data.map((d:any,i:number)=><div key={d.id??d.im??i} className="diff-row" style={{display:"grid",gridTemplateColumns:cols,padding:"5px 12px",borderBottom:"1px solid #F5F5F3",fontSize:11,alignItems:"center"}}>{renderRow(d,i)}</div>)}
-      </div>
-      </div></div>
-    </div>
-  );
 
   return(
     <div className="app-shell" style={{minHeight:"100vh",background:"#F3F3F1",color:"#333",fontFamily:"'Outfit',system-ui,sans-serif",fontSize:13}}>
@@ -1168,26 +1147,6 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
             </div>
           </div>
         )}
-        {tab==="vehicules"&&(
-          <div className="ani" style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#1A1A1A"}}>Vehicules</div>
-              <div style={{display:"flex",gap:6}}>
-                <Pill c="#3A9BD5" t={`${dUrban.length} Urban Neo`}/><Pill c="#2FAA6B" t={`${dGreen.length} Green`}/><Pill c="#1A1A1A" t={`${all.length} total`}/>
-              </div>
-            </div>
-            <div className="grid-mobile" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <MiniTbl title="VEHICULES URBAN NEO" titleBg="#D6E9F8" count={`${dUrban.length} voitures`} countBad={nUI>0?`${nUI} a l'arret`:null}
-                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={sortVeh(dUrban)} maxH={500}
-                renderRow={(v:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,color:"#1A1A1A",fontSize:10}}>{v.im}</span><span style={{color:"#666"}}>{v.mq}</span><span style={{color:"#666"}}>{v.mo}</span><span style={{color:"#999",fontSize:10}}>{v.le||"—"}</span><StBadge s={v.st}/><span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span></>}
-              />
-              <MiniTbl title="VEHICULES GREEN" titleBg="#D4F0E0" count={`${dGreen.length} voitures`} countBad={nGI>0?`${nGI} a l'arret`:null}
-                heads={["IMMAT","MARQUE","MODELE","LEASER","STATUT","CHAUFFEUR"]} cols="85px 55px 65px 55px 45px 1fr" data={sortVeh(dGreen)} maxH={500}
-                renderRow={(v:any)=><><span style={{fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,color:"#1A1A1A",fontSize:10}}>{v.im}</span><span style={{color:"#666"}}>{v.mq}</span><span style={{color:"#666"}}>{v.mo}</span><span style={{color:"#999",fontSize:10}}>{v.le||"—"}</span><StBadge s={v.st}/><span style={{color:"#444",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.ch}</span></>}
-              />
-            </div>
-          </div>
-        )}
         {tab==="flotte"&&(
           <div className="ani">
             <div style={{display:"flex",gap:6,marginBottom:10}}>
@@ -1202,7 +1161,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
               {displayUser.role!=='lecteur' && <button onClick={()=>showAdd==="fleet"?setShowAdd(null):setShowAdd("fleet")} style={oBtn("#E8633A",showAdd==="fleet")}>{showAdd==="fleet"?"Annuler":"+ Ajouter"}</button>}
             </div>
             {showAdd==="fleet"&&<AddBox fields={[["Immat *","im","XX-000-XX"],["Marque","mq","HYUNDAI"],["Modele","mo","KONA"],["Leaser","le","ELPIS"],["Chauffeur","ch","Nom"]]} form={form} setForm={setForm} onAdd={()=>{if(!form.im?.trim())return;add(fTab,{...form,im:form.im.toUpperCase().trim(),mq:(form.mq||"").toUpperCase().trim(),st:form.st||"ACTIF"});}} extra={<Sel l="Statut" v={form.st||"ACTIF"} set={(v:string)=>setForm({...form,st:v})} opts={["ACTIF","IMMO"]}/>}/>}
-            <div style={{fontSize:11,color:"#AAA",marginBottom:6}}>{filt.length} VH</div>
+            <div style={{fontSize:11,color:"#AAA",marginBottom:6}}>{filt.length} VH{(fTab==="urban"?nUI:nGI)>0&&<span style={{color:"#C0392B",fontWeight:700}}> · {fTab==="urban"?nUI:nGI} à l'arrêt</span>}</div>
             <div className="diff-block" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E5E3",overflow:"hidden"}}>
               <div className="diff-head" style={{display:"grid",gridTemplateColumns:"100px 1fr 70px 90px 75px 60px 110px",padding:"8px 12px",background:"#FAFAF8",borderBottom:"1px solid #E5E5E3",fontSize:9,fontWeight:700,color:"#AAA",letterSpacing:.8,textTransform:"uppercase"}}>
                 <span>IMMAT</span><span>CHAUFFEUR</span><span>MARQUE</span><span>MODELE</span><span>LEASER</span><span>STATUT</span><span style={{textAlign:"right"}}></span>
