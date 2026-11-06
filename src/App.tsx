@@ -1438,7 +1438,7 @@ function Dashboard({user,userToken,onLogout}:{user:AppUser,userToken:string,onLo
           fields={[["Identifiant *","username","login"],["Nom d'affichage *","displayName","Ex: Jean D."],
             ["Role","role",null, user.role==='admin' ? ["lecteur","editeur","admin"]: ["lecteur","editeur"]],
             ["Pole","pole",null,["activite","parc","commercial","all"]],
-            ["Mot de passe","password","Vide = opportix2025"]]}
+            ["Mot de passe","password","Vide = code par défaut"]]}
           form={form} setForm={setForm}
           addItem={async(type:string, f:any)=>{
             if(!f.username?.trim() || !f.displayName?.trim()) return;

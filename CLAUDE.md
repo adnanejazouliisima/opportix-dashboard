@@ -22,7 +22,9 @@ No test suite, no linter. Verify changes with `npx tsc --noEmit` and a manual cl
 
 The backend needs `MONGODB_URI` (defaults to `mongodb://localhost:27017/opportix` in dev) and in prod `JWT_SECRET` is mandatory (server refuses to start without it). `ALLOWED_ORIGINS` is a comma-separated CORS whitelist (Render's own `RENDER_EXTERNAL_URL` is auto-whitelisted). Rate limits: login `10/15min`, all other `/api/*` `120/min`.
 
-On first boot to an empty DB, [server/server.cjs](server/server.cjs) seeds `users` from [server/users.json](server/users.json) (default password `opportix2025` re-hashed) and the fleet doc from [server/data.json](server/data.json). The `runMigrations()` step promotes the `yannis` account to admin.
+On first boot to an empty DB, [server/server.cjs](server/server.cjs) seeds `users` from [server/users.json](server/users.json) (placeholder passwords get the default code) and the fleet doc from [server/data.json](server/data.json). The `runMigrations()` step promotes the `yannis` account to admin and runs the one-off default-code change (see Auth and roles).
+
+The default access code is stored only as a bcrypt hash (`DEFAULT_PWD_HASH` in [server/server.cjs](server/server.cjs)) — the GitHub repo is public and the frontend bundle is served unauthenticated, so never write the code in clear text in source, UI strings or docs. To change it: generate a new hash with `bcryptjs`, replace the constant, and add a new one-off migration.
 
 ## Architecture
 
@@ -86,6 +88,8 @@ WebSocket (`io` + `data-changed` event) broadcasts after every PUT. Fallback pol
 ### Auth and roles
 
 JWT (`Authorization: Bearer <token>`), three roles: `admin`, `editeur`, `lecteur`. `canEdit` middleware blocks lecteurs from PUTs; `adminOnly` for user management, audit log, archive read, monthly CSV export. Frontend hides write buttons when `displayUser.role==='lecteur'` (also forced when viewing a past week — see `isHistorical`).
+
+**Session revocation:** every JWT carries `sv` (session version); `verifyToken()` (used by both the `auth` middleware and the socket `auth` event) rejects a token whose `sv` differs from the in-memory `sessVer`, answering `401 {expired:true}` so the frontend logs out on its next poll. `sessVer` is loaded at boot from the `meta` collection (`{_key:'auth'}`); incrementing it there and restarting disconnects everyone. The one-off migration `mig-default-code-2026-11` (marker doc in `meta`) moved every account still on the retired `opportix2025` code to the new default and bumped `sessVer`; accounts with a custom password were left alone.
 
 Non-admin saves are rejected by "wipe protection" if any array shrinks by >50% — see `protectedKeys` in [server/server.cjs](server/server.cjs).
 

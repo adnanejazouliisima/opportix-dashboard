@@ -20,6 +20,24 @@ const SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
   : 'network-dashboard-secret-key-2024');
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/opportix';
 
+/* ═══ CODE D'ACCES PAR DEFAUT + REVOCATION DES SESSIONS ═══ */
+// Hash bcrypt du code par defaut — jamais en clair ici : le depot GitHub est public.
+const DEFAULT_PWD_HASH = '$2b$10$C6PCwGqWfMYB0Q5JKhG0IOtM7zHBhOsj8tQt/srV45IYTvhrK8JV6';
+// Ancien code par defaut (retire) : ne sert plus qu'a reperer les comptes qui l'utilisent encore.
+const OLD_DEFAULT_PWD = 'opportix2025';
+// Version des sessions (collection meta). Un jeton emis sous une autre version est refuse :
+// incrementer sessVer deconnecte tout le monde.
+let sessVer = 0;
+function verifyToken(token) {
+  const payload = jwt.verify(token, SECRET);
+  if ((payload.sv || 0) !== sessVer) {
+    const e = new Error('Session revoquee');
+    e.name = 'TokenExpiredError'; // meme traitement qu'un jeton expire : le client se deconnecte
+    throw e;
+  }
+  return payload;
+}
+
 /* ═══ PUSH NOTIFICATIONS (Web Push / VAPID) ═══ */
 const VAPID_PUBLIC = (process.env.VAPID_PUBLIC_KEY || '').trim();
 const VAPID_PRIVATE = (process.env.VAPID_PRIVATE_KEY || '').trim();
@@ -59,7 +77,7 @@ const io = new SocketServer(httpServer, {
 });
 io.on('connection', (socket) => {
   socket.on('auth', (token) => {
-    try { socket.user = jwt.verify(token, SECRET); socket.join('authed'); }
+    try { socket.user = verifyToken(token); socket.join('authed'); }
     catch { socket.disconnect(); }
   });
 });
@@ -100,6 +118,7 @@ async function connectDB() {
   await db.collection('archive').createIndex({ deletedAt: -1 });
   await db.collection('snapshots').createIndex({ weekLabel: 1 }, { unique: true });
   await db.collection('push_subs').createIndex({ endpoint: 1 }, { unique: true });
+  await db.collection('meta').createIndex({ _key: 1 });
   await seedIfEmpty();
   await runMigrations();
 }
@@ -113,7 +132,7 @@ async function seedIfEmpty() {
       const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
       users.forEach(u => {
         if (u.password === 'placeholder' || u.password.length < 20) {
-          u.password = bcrypt.hashSync('opportix2025', 10);
+          u.password = DEFAULT_PWD_HASH;
         }
       });
       await db.collection('users').insertMany(users);
@@ -134,6 +153,27 @@ async function runMigrations() {
     { $set: { role: 'admin' } }
   );
   if (result.modifiedCount > 0) console.log('  → yannis promu admin');
+
+  // Changement du code d'acces par defaut — une seule fois (marqueur dans meta).
+  // Les comptes encore sur l'ancien code passent au nouveau ; un mot de passe personnalise
+  // n'est pas touche. Puis sessVer est incremente : toutes les sessions ouvertes sont revoquees.
+  const meta = db.collection('meta');
+  if (!(await meta.findOne({ _key: 'mig-default-code-2026-11' }))) {
+    const users = await db.collection('users').find({}).toArray();
+    let n = 0;
+    for (const u of users) {
+      if (typeof u.password === 'string' && bcrypt.compareSync(OLD_DEFAULT_PWD, u.password)) {
+        await db.collection('users').updateOne({ _id: u._id }, { $set: { password: DEFAULT_PWD_HASH } });
+        n++;
+      }
+    }
+    await meta.updateOne({ _key: 'auth' }, { $inc: { sessVer: 1 } }, { upsert: true });
+    await meta.insertOne({ _key: 'mig-default-code-2026-11', at: new Date(), users: n, total: users.length });
+    await audit(null, 'default_code_changed', { users: n, total: users.length, sessionsRevoked: true });
+    console.log(`  → Code par defaut change : ${n}/${users.length} comptes mis a jour, sessions revoquees`);
+  }
+  const authMeta = await meta.findOne({ _key: 'auth' });
+  sessVer = (authMeta && authMeta.sessVer) || 0;
 }
 
 /* ═══ AUDIT LOGGING ═══ */
@@ -243,7 +283,7 @@ function auth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Non autorise' });
   try {
-    req.user = jwt.verify(token, SECRET);
+    req.user = verifyToken(token);
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -285,7 +325,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
   }
   const token = jwt.sign(
-    { id: user.id || user._id, username: user.username, displayName: user.displayName, role: user.role, pole: user.pole },
+    { id: user.id || user._id, username: user.username, displayName: user.displayName, role: user.role, pole: user.pole, sv: sessVer },
     SECRET,
     { expiresIn: '12h' }
   );
@@ -577,7 +617,7 @@ app.post('/api/users', auth, adminOnly, async (req, res) => {
     displayName: displayName.trim(),
     role: finalRole,
     pole: pole || 'activite',
-    password: bcrypt.hashSync(password || 'opportix2025', 10)
+    password: password ? bcrypt.hashSync(password, 10) : DEFAULT_PWD_HASH
   };
   await db.collection('users').insertOne(newUser);
   await audit(req.user, 'user_created', { username, role: finalRole });
@@ -651,7 +691,7 @@ async function startServer() {
       console.log(`  → Reseau:  http://${n.address}:${PORT}`);
     });
     console.log(`\n  Comptes par defaut:`);
-    console.log(`  → (username) / opportix2025\n`);
+    console.log(`  → (username) / code par defaut\n`);
 
     // Auto-snapshot: ensure current week exists, then schedule weekly
     (async () => {
